@@ -1,0 +1,433 @@
+## Spring_boot_SSM整合：
+
+### 1.springboot项目依赖：
+
+**注意：依赖导入后springboot会自动配置相关依赖的配置文件，没有对应的依赖则不会配置，必须是springboot的专属依赖，外部的依赖，不会为其配置，配置文件**
+
+```xml
+		<!--springboot专属的thymeleaf页面引擎-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+        <!--springboot-web项目，解释：springmvc相关的依赖-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!--整合mybatis-->
+
+        <!--原生jdbc依赖-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jdbc</artifactId>
+        </dependency>
+        <!--mysql驱动-->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!--mybatis框架依赖-->
+        <dependency>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+            <version>2.1.3</version>
+        </dependency>
+```
+
+### 2.springboot，SSM项目配置：
+
+**注意：只要项目中有相关的依赖springboot就会自动为其依赖配置，配置文件，**
+**我们只需要简单的在springboot项目中配置一些，springboot项目本身不能确认的参数即可**
+
+```properties
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.url=jdbc:mysql://数据库IP:3306/具体数据库名
+spring.datasource.username=账户
+spring.datasource.password=密码
+```
+
+### 3.更改spingboot默认使用的连接池：
+
+SpringBoot默认使用HikariDataSource连接池,我们也可以自己指定连接池.
+```properties
+#指定数据源的类型是hikari连接池类型，就可以使用hikari连接池了，其他的数据源配置，账户密码驱动什么的不用动，还用原始的就行
+spring.datasource.type=com.zaxxer.hikari.HikariDataSource
+```
+友情提示：每个连接池，内都有自己配置用户名密码的对应路径和属性
+
+引入连接池依赖改写配置文件：
+
+```xml
+<!--阿里巴巴的数据库连接池-->
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>druid</artifactId>
+    <version>1.1.10</version>
+</dependency>
+
+```
+
+改写配置文件，修改数据源的数据类型是阿里巴巴的数据源
+
+```properties
+spring.datasource.type=com.alibaba.druid.pool.DruidDataSource
+```
+
+### 4.Springboot日志:
+
+**springboot默认使用 logback 作为日志框架，SpringBoot使用slf4j 当做接口,使用Logback作为日志实现**
+
+可以在application.properties文件中修改关于日志框架的设置：
+
+```json
+#设置日志的数据级别
+logging.level.root=info
+
+#设置日志文件的输出位置
+logging.file=myapp.log
+```
+
+SpringBoot可以使用别的日志框架,不使用logback. 但是不建议使用别的.
+
+Logback日志使用效率比其他几个日志框架更快
+
+### 5.springdata _ jpa:
+
+特点：不用写sql语句
+
+**注意：Springdata_ Jpa 即 hibernate框架中 的set ,get自动生成sql 语句用的就是springdata_ jpa框架**
+
+### 6.springboot mybatis用法：
+
+**和ssm项目的用法一样唯一的区别就是不用配置配置文件了！**
+
+
+**springboot扫描mapper方法**：
+
+1.在 springbootApplication 启动类上加 " @MapperScan " 对指定的 mapper 包进行扫描,可以扫描注解，也可以扫描mapper.xml文件
+
+2.在 mapper 的接口上加 " @Mapper " 注解，即可生成让此注解生成对应的实现类，只能让对应的注解生成实现类不具备扫描 mapper.xml 文件的能力
+
+
+
+### 7.springboot属性注入：
+
+#### 1).创建类
+
+需要在类上添加注解：@ConfigurationProperties(prefix = "testobjecs") //prefix代表指定此类的名字
+
+上方的注解必须要搭配创建bean的注解使用，例：@Component ，也就是说把此类放进spring的容器中才能对其进行配置
+
+```java
+@Component //把此类放进spring的容器中
+@ConfigurationProperties(prefix = "testobjecs") //声明此类是要进行属性配置的类，并指定[prefix/名字]进行配置时，使用
+public class TestObjecs {
+    String ddf;
+
+    @Override
+    public String toString() {
+        return "TestObjecs{" +
+                "ddf='" + ddf + '\'' +
+                '}';
+    }
+
+    public TestObjecs(String ddf) {
+        this.ddf = ddf;
+    }
+
+    public TestObjecs() {
+    }
+
+    public String getDdf() {
+        return ddf;
+    }
+
+    public void setDdf(String ddf) {
+        this.ddf = ddf;
+    }
+}
+
+```
+
+#### 2).写springboot配置文件：
+
+```yml
+testobjecs: #指定的名字
+  ddf: 你好世界 #此类下的属性
+```
+
+#### 3).使用进行输入注入过的类：
+
+```java
+@Resource
+TestObjecs testObjecs; 
+//使用时要从spring容器中拿，不能直接创建对象使用，因为属性注入的过程是在spring容器内部完成的，外部创建的对象没有办法使用配置过的属性
+
+@GetMapping("test")
+public TestObjecs index(){
+    return testObjecs;
+}
+```
+
+### 8.spring boot全局异常处理
+
+```java
+/**
+ * @author Rain
+ * <p>
+ * 此类是全局异常处理类
+ * </p>
+ */
+@RestControllerAdvice //声明此类是异常类
+public class GlobalExceptionHandling {
+
+    @ExceptionHandler(Exception.class) //声明此类要处理的异常类型
+    public String exceptionHandler(Exception a) {
+        String message = a.getMessage();
+        return "{\"exceptionMassage\":\"" + message + "\"}";
+    }
+
+}
+```
+
+### 9.springboot事务管理
+
+**注意**：首先要做springboot的启动类上添加 **@EnableTransactionManagement** 注解，开启springboot注解的支持
+
+
+
+*直接在类或方法上写：@Transactional 注解即可提交事务*
+
+**@Transactional类上和方法上的区别：**
+
+类上：@Transactional放在类级别上等同于该类的每个公有方法都放上了@Transactional
+
+方法上：@Transactional只对当前方法有效
+
+示例：
+
+**在类上添加注解**
+
+```java
+@Transactional
+public class FileOperatingServiceimpl {
+```
+
+**在方法上添加提交事务的注解**
+
+```java
+@Transactional
+public Files selectFolderandfiles(String parentDirectory) {
+    return new Files(url_folderMapper.selectFolder(parentDirectory), s_filesMapper.selectFiles(parentDirectory));
+}
+```
+
+**@Transactional 的所有可选属性如下:**
+
+属性 类型 默认值 说明
+propagation Propagation枚举 REQUIRED 事务传播属性 (下有说明)
+isolation isolation枚举 DEFAULT 事务隔离级别 (另有说明)
+readOnly boolean false 是否只读
+timeout int -1 超时(秒)
+rollbackFor Class[] {} 需要回滚的异常类
+rollbackForClassName String[] {} 需要回滚的异常类名
+noRollbackFor Class[] {} 不需要回滚的异常类
+noRollbackForClassName String[] {} 不需要回滚的异常类名
+
+**Transactional 注解的属性**
+
+| 属性                                     | 类型                                        | 描述                                                         |
+| :--------------------------------------- | :------------------------------------------ | :----------------------------------------------------------- |
+| 传播性                                   | 枚举型：Propagation                         | 可选的传播性设置 （默认值：PROPAGATION_REQUIRED ）           |
+| 隔离性                                   | 枚举型：Isolation                           | 可选的隔离性级别（默认值：ISOLATION_DEFAULT ）               |
+| 只读性                                   | 布尔型                                      | 读写型事务 vs. 只读型事务（默认值：false ，即只读型事务）    |
+| 回滚异常类（rollbackFor）                | 一组 Class 类的实例，必须是Throwable 的子类 | 一组异常类，遇到时 **确保** 进行回滚。默认情况下checked exceptions不进行回滚，仅unchecked exceptions（即RuntimeException 的子类）才进行事务回滚。 |
+| 回滚异常类名（rollbackForClassname）     | 一组 Class 类的名字，必须是Throwable 的子类 | 一组异常类名，遇到时 **确保** 进行回滚                       |
+| 不回滚异常类（noRollbackFor）            | 一组 Class 类的实例，必须是Throwable 的子类 | 一组异常类，遇到时确保 **不** 回滚。                         |
+| 不回滚异常类名（noRollbackForClassname） | 一组 Class 类的名字，必须是Throwable 的子类 | 一组异常类，遇到时确保 **不** 回滚                           |
+
+### 10.springboot ：Jdbc template
+
+解释：此框架和jpa有点类似，但不一样，Jdbc template是多jdbc的封装
+
+1.导入依赖：
+
+```xml
+<!--jdbc Template 框架的依赖，同时也是原生jdbc依赖-->
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-data-jdbc</artifactId>
+</dependency>
+<!--mysql的驱动包-->
+<dependency>
+  <groupId>mysql</groupId>
+  <artifactId>mysql-connector-java</artifactId>
+  <scope>runtime</scope>
+</dependency>
+```
+
+2.改写配置文件，其他配置文件，springboot会自动帮助你进行配置完成
+
+```yml
+#配置数据源
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: rain_01
+    password: fankaiyu20010801
+    url: jdbc:mysql://rm-bp18268a32r8n812xxo.mysql.rds.aliyuncs.com:3306/rain_cloud_storage
+```
+
+3.调用spring容器中的 jdbcTemplate	bean对象，对数据库进行操作
+
+```java
+//在JdbcTemplate中执行SQL语句的方法大致分为3类：
+execute：//可以执行所有SQL语句，一般用于执行DDL语句。
+update：//用于执行INSERT、UPDATE、DELETE等DML语句。
+queryXxx：//用于DQL数据查询语句。
+```
+
+进行代码测试：
+
+```java
+@Resource(name = "jdbcTemplate")
+JdbcTemplate jdbcTemplate;
+@Test
+void contextLoads() {
+    List<Map<String, Object>> maps = jdbcTemplate.queryForList("select * from users");
+    System.out.println(maps);
+}
+```
+
+### 11.springboot集成的缓存
+
+#### 1.配置配置文件
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<ehcache>
+     <!--指定持久化的位置：即缓存文件的位置-->
+    <diskStore path="d:/cache/worker.obj"/>
+    <!--springboot默认制定的缓存规则-->
+    <defaultCache maxElementsInMemory="10000"
+                  eternal="false"
+                  timeToIdleSeconds="600"
+                  timeToLiveSeconds="600"
+                  overflowToDisk="true"/>
+    <!--我们自己制定的默认缓存规则-->
+    <defaultCache name="cacheMy"
+                  maxElementsInMemory="20000"
+                  eternal="false"
+                  timeToIdleSeconds="300"
+                  timeToLiveSeconds="300"
+                  overflowToDisk="true"/>
+</ehcache>
+```
+
+ <!--
+     maxElementsInMemory:缓存最大数目
+     eternal:对象是否永久有效，一但设置了，timeout将不起作用。
+     overflowToDisk:是否保存到磁盘，当系统当机时
+     timeToIdleSeconds:设置对象在失效前的允许闲置时间（单位：秒）。仅当eternal=false对象不是永久有效时使用，可选属性，默认值是0，也就是可闲置时间无穷大。
+     timeToLiveSeconds:设置对象在失效前允许存活时间（单位：秒）。最大时间介于创建时间和失效时间之间。仅当eternal=false对象不是永久有效时使用，默认是0.，也就是对象存活时间无穷大。
+     diskPersistent：是否缓存虚拟机重启期数据 Whether the disk store persists between restarts of the Virtual Machine. The default value is false.
+     diskSpoolBufferSizeMB：这个参数设置DiskStore（磁盘缓存）的缓存区大小。默认是30MB。每个Cache都应该有自己的一个缓冲区。
+     diskExpiryThreadIntervalSeconds：磁盘失效线程运行时间间隔，默认是120秒。
+     memoryStoreEvictionPolicy：当达到maxElementsInMemory限制时，Ehcache将会根据指定的策略去清理内存。默认策略是LRU（最近最少使用）。你可以设置为FIFO（先进先出）或是LFU（较少使用）。
+     clearOnFlush：内存数量最大时是否清除。
+     memoryStoreEvictionPolicy:可选策略有：LRU（最近最少使用，默认策略）、FIFO（先进先出）、LFU（最少访问次数）。
+     FIFO，first in first out，这个是大家最熟的，先进先出。
+     LFU， Less Frequently Used，就是上面例子中使用的策略，直白一点就是讲一直以来最少被使用的。如上面所讲，缓存的元素有一个hit属性，hit值最小的将会被清出缓存。
+     LRU，Least Recently Used，最近最少使用的，缓存的元素有一个时间戳，当缓存容量满了，而又需要腾出地方来缓存新的元素的时候，那么现有缓存元素中时间戳离当前时间最远的元素将被清出缓存。
+  -->
+
+#### 2.在dao的接口上
+
+```java
+@CacheConfig(cacheNames = "cacheMy")//指定缓存文件的位置
+public interface WorkerDao {
+    @Cacheable//指定要使用缓存的方法
+    @Select("select * from worker")
+    public Worker getAll();
+}
+```
+
+#### 3.在启动类上添加注解
+
+```java
+@EnableCaching //启动缓存
+public class Test05SpringbootApplication {
+	public static void main(String[] args) {
+		SpringApplication.run(Test05SpringbootApplication.class, args);
+	}
+}
+```
+
+#### 4.service 业务代码
+
+进行增删改时要清空缓存
+
+```java
+package com.zhiyou100.service;
+
+@Service
+public class WorkerServiceImp  implements  WorkerService{
+    @Autowired
+    private WorkerDao workerDao;
+ 	
+    @Autowired
+    private CacheManager cacheManager;   //获取 cacheManager的bean来进行缓存清空
+    
+    public int updateOne(Worker w){
+        int hang= workerDao.updateOne(w);
+        //清空配置文件配置的缓存文件，指定的文件名字的缓存文件
+        cacheManager.getCache("cacheMy").clear();
+        return hang;
+    }
+}
+```
+
+#### 5.启动springboot项目进行测试缓存测试
+
+
+### 12.springboot 通用mapper
+1.导入依赖
+```xml
+<!--mybatis的通用mapper插件-->
+<dependency>
+    <groupId>tk.mybatis</groupId>
+    <artifactId>mapper-spring-boot-starter</artifactId>
+    <version>2.1.5</version>
+</dependency>
+```
+2.创建接口，继承插件中对应的接口
+**注意**：要添加上mybatis的 @Mapper注解不然此接口不能使用
+```java
+@org.apache.ibatis.annotations.Mapper
+public interface UniversalMapper extends Mapper<S_files> , MySqlMapper<S_files> {
+
+}
+```
+3.测试，调用此接口,使用方法和使用mybatis的mapper接口一样，要从spring容器中拿取
+```java
+  @Autowired
+    UniversalMapper universalMapper;
+
+    @Test
+    void contextLoads() {
+        List<S_files> s_files = universalMapper.selectAll();
+        System.out.println(s_files);
+    }
+```
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,808 @@
+## POI
+
+### 一： 概念
+
+ [Apache](https://baike.baidu.com/item/Apache/6265) POI [1] 是用[Java](https://baike.baidu.com/item/Java/85979)编写的免费开源的跨平台的 Java API，Apache POI提供API给Java程式对[Microsoft Office](https://baike.baidu.com/item/Microsoft Office)格式档案读和写的功能。POI为“Poor Obfuscation Implementation”的首字母缩写，意为“简洁版的模糊实现 
+
+主要是word和excel
+
+HSSF [1] － 提供读写[Microsoft Excel](https://baike.baidu.com/item/Microsoft Excel) [XLS](https://baike.baidu.com/item/XLS)格式档案的功能。
+
+XSSF [1] － 提供读写Microsoft Excel OOXML [XLSX](https://baike.baidu.com/item/XLSX)格式档案的功能。
+
+HWPF [1] － 提供读写[Microsoft Word](https://baike.baidu.com/item/Microsoft Word) [DOC](https://baike.baidu.com/item/DOC)格式档案的功能。
+
+HSLF [1] － 提供读写Microsoft [PowerPoint](https://baike.baidu.com/item/PowerPoint)格式档案的功能。
+
+HDGF [1] － 提供读[Microsoft Visio](https://baike.baidu.com/item/Microsoft Visio)格式档案的功能。
+
+HPBF [1] － 提供读[Microsoft Publisher](https://baike.baidu.com/item/Microsoft Publisher)格式档案的功能。
+
+HSMF [1] － 提供读[Microsoft Outlook](https://baike.baidu.com/item/Microsoft Outlook)格式档案的功能。
+
+工作簿：一个excel文件
+
+工作表：一个sheet  一个工作薄可以创建多个sheet
+
+行：row  一个sheet有多行
+
+单元格：cell  一个row有多个单元格  
+
+服务器的导入导出也都差不多，都是操作字节流，所以从请求或响应上获取输入输出流，即可进行操作 !
+
+### 二：导入依赖
+
+```xml
+<!--读取excel文件-->
+<dependency>
+	<groupId>org.apache.poi</groupId>
+	<artifactId>poi</artifactId>
+	<version>3.17</version>
+</dependency>
+<dependency>
+	<groupId>org.apache.poi</groupId>
+	<artifactId>poi-ooxml</artifactId>
+	<version>3.17</version>
+</dependency>
+```
+
+### 三：POI 使用方法
+
+输出：OutputStream
+
+```java
+ public static void main(String[] args) throws IOException {
+//        给excel添加初始数据
+        String[] s = new String[]{"编号", "姓名", "性别", "年龄"};
+        ArrayList<Student> list = new ArrayList<>();
+        list.add(new Student(1001, "韩梅梅", "女", 19));
+        list.add(new Student(1002, "韩庚", "男", 49));
+        list.add(new Student(1003, "军绿", "女", 19));
+        list.add(new Student(1004, "飞洒", "男", 49));
+        list.add(new Student(1005, "文件", "女", 19));
+        list.add(new Student(1006, "快乐", "男", 49));
+//      excel文件操作对象
+        HSSFWorkbook sheets = new HSSFWorkbook();
+//      创建一个新的工作表
+        HSSFSheet first01 = sheets.createSheet("first01");
+//      创建行
+        HSSFRow row = first01.createRow(0);
+//      设置样式
+//      利用表对象创建单元格样式对象
+        HSSFCellStyle cellStyle = sheets.createCellStyle();
+//      利用表对象创建字体对象，用来设置字体的样式
+        HSSFFont font = sheets.createFont();
+//      设置字体是否加粗
+        font.setBold(true);
+//      把字体对象放进样式对象中，让其对字体设置的样式生效
+        cellStyle.setFont(font);
+//      根据样式对象，设置字体文字左右居中
+        cellStyle.setAlignment(HorizontalAlignment.CENTER);
+//      根据样式对象，设置字体文字上下居中
+        cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+//      给工作表的第一行设置字段值，即标题
+        for (int i = 0; i < s.length; i++) {
+//          创建行
+            HSSFCell cell = row.createCell(i);
+//          创建列，给列添加值
+            cell.setCellValue(s[i]);
+//          把创建好的样式对象放进数据中，给单元格添加样式
+            cell.setCellStyle(cellStyle);
+        }
+//      设置要添加数据的样式
+        HSSFCellStyle cellStyle1 = sheets.createCellStyle();
+//      根据样式对象，设置字体文字左右居中
+        cellStyle1.setAlignment(HorizontalAlignment.CENTER);
+//      根据样式对象，设置字体文字上下居中
+        cellStyle1.setVerticalAlignment(VerticalAlignment.CENTER);
+//      给工作表的字段下，循环数据集合，添加数据
+        for (int i = 0; i < list.size(); i++) {
+//            循环创建行把集合中的数据放进excel表中
+            HSSFRow row1 = first01.createRow(i + 1);
+
+            HSSFCell cell = row1.createCell(0);
+            cell.setCellValue(list.get(i).number);
+            cell.setCellStyle(cellStyle1);
+            HSSFCell cell1 = row1.createCell(1);
+            cell1.setCellValue(list.get(i).name);
+            cell1.setCellStyle(cellStyle1);
+            HSSFCell cell2 = row1.createCell(2);
+            cell2.setCellValue(list.get(i).sex);
+            cell2.setCellStyle(cellStyle1);
+            HSSFCell cell3 = row1.createCell(3);
+            cell3.setCellValue(list.get(i).age);
+            cell3.setCellStyle(cellStyle1);
+        }
+//      给excel文件操作对象，设置一个文件输出流
+        sheets.write(new FileOutputStream(new File("C:\\Java-Files\\test01.xlsx")));
+//      关闭excel文件的文件输出流
+        sheets.close();
+    }
+```
+
+输入：inputStream
+
+```java
+      //1 导入jar
+        //2 创建hssfwork对象 关联源文件对应的输入流
+        FileInputStream fin = new FileInputStream("d:\\student01.xls");
+        HSSFWorkbook book = new HSSFWorkbook(fin);
+        //3 获取所有工作表
+        int number = book.getNumberOfSheets();//获取工作表的个数
+        for (int i = 0; i < number; i++) {
+            Sheet sheeti = book.getSheetAt(i);//获取一个工作表
+            //获取当前工作表的所有列
+            Iterator<Row> itRow = sheeti.iterator();
+            while (itRow.hasNext()) {
+                Row row = itRow.next();//获取一行数据
+                //获取行下的所有单元格
+                for (Iterator<Cell> itCell =
+                     row.iterator(); itCell.hasNext(); ) {
+                    //获取每个单元格的数据
+                    Cell cell = itCell.next();
+                    //判断单元格数据的类型
+                    if (cell.getCellType() ==
+                            HSSFCell.CELL_TYPE_BOOLEAN) {
+                        boolean value = cell.getBooleanCellValue();
+                        System.out.println("boolean类型：" + value);
+                    } else if (cell.getCellType() ==
+                            HSSFCell.CELL_TYPE_STRING) {
+                        String value = cell.getStringCellValue();
+                        System.out.println("string类型：" + value);
+                    } else if (cell.getCellType() ==
+                            HSSFCell.CELL_TYPE_NUMERIC) {//数字和日期类型
+                        //判断单元格数据的格式
+                        if (HSSFDateUtil.isCellDateFormatted(cell)) {// 处理日期格式、时间格式
+                            Date value = cell.getDateCellValue();
+                            System.out.println("date类型：" + value);
+                        } else {
+                            double value =
+                                    cell.getNumericCellValue();
+                            System.out.println("double：" + value);
+                        }
+                    }
+                }
+            }
+        }
+        //4 关闭流
+        fin.close();
+```
+### 四：阿里的excel使用
+
+学习网址：https://www.cnblogs.com/nxzblogs/articles/12510393.html
+
+阿里官方网址：https://alibaba-easyexcel.github.io/quickstart/write.html
+
+导入pom依赖：
+
+```xml
+<!--阿里的poi工具框架-->
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>easyexcel</artifactId>
+    <version>2.0.5</version>
+</dependency>
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-simple</artifactId>
+    <version>1.7.25</version>
+    <scope>compile</scope>	//使用范围，compile 运行时使用，test 测试时使用
+</dependency>
+
+
+```
+
+在数据对象上写注解：
+
+```java
+public class Student {
+    @ExcelIgnore	//主键的注解上不用写参数
+    int number;
+    @ExcelProperty("名字") //不是主键，且想展现在excel表格中的数据，在注解上写参数即导出时在excel表中，此数据代表是哪个字段下的数据，
+    String name;	// 不想展示的数据就用 @ExcelIgnore 注解，不止主键可以用，想展示在excel表中的数据就用 @ExcelProperty 注解不过要加注解参数
+    @ExcelProperty("性别")
+    String sex;
+    @ExcelProperty("年龄")
+    int age;
+```
+
+执行：
+
+```java
+//        给excel添加初始数据
+ArrayList<Student> lists = new ArrayList<>();
+
+lists.add(new Student(1001, "韩梅梅", "女", 19));
+lists.add(new Student(1002, "韩庚", "男", 49));
+lists.add(new Student(1003, "军绿", "女", 19));
+lists.add(new Student(1004, "飞洒", "男", 49));
+lists.add(new Student(1005, "文件", "女", 19));
+lists.add(new Student(1006, "快乐", "男", 49));
+// 这里 需要指定写用哪个class去写，然后写到第一个sheet，名字为模板 然后文件流会自动关闭
+// 如果这里想使用03 则 传入excelType参数即可
+//调用阿里poi中导出excel的方法，传入（文件路径，数据对象的 class） ，（excel表中工作簿的名字，下方写的是模板），（最后传入集合数据），点击运行！
+EasyExcel.write("C:\\Java-Files\\seiuk.xlsx",Student.class).sheet("模板").doWrite(lists);
+
+
+
+//调用阿里poi中导入excel的方法
+
+// 这里 需要指定读用哪个class去读，然后读取第一个sheet 文件流会自动关闭
+/**
+* 参数1 要读取的文件
+* 参数2 要读取的数据对应的实体类类对象
+* 参数3 监听器对象 可以在创建的时候把dao当做参数传进去
+*/
+EasyExcel.read(fileName, Teacher.class, new DemoDataListener(teacherDao)).sheet().doRead();
+
+```
+
+监听器对象：
+
+```java
+package com.lu.booteasyexcel;
+
+import com.alibaba.excel.context.AnalysisContext;
+import com.alibaba.excel.event.AnalysisEventListener;
+import com.lu.booteasyexcel.dao.TeacherDao;
+import com.lu.booteasyexcel.entity.Teacher;
+
+import java.util.ArrayList;
+import java.util.List;
+
+// 有个很重要的点 DemoDataListener 不能被spring管理，要每次读取excel都要new,然后里面用到spring可以构造方法传进去
+public class DemoDataListener extends AnalysisEventListener<Teacher> {
+    /**
+     * 每隔5条存储数据库，实际使用中可以3000条，然后清理list ，方便内存回收
+     */
+    private static final int BATCH_COUNT = 5;
+
+    /**
+     * 这个集合用于接收 读取Excel文件得到的数据
+     */
+    List<Teacher> list = new ArrayList<Teacher>();
+
+    /**
+     * 假设这个是一个DAO，当然有业务逻辑这个也可以是一个service。当然如果不用存储这个对象没用。
+     */
+    private TeacherDao teacherDao;
+
+    public DemoDataListener() {
+
+    }
+
+    /**
+     *
+     * 不要使用自动装配
+     * 在测试类中将dao当参数传进来
+     */
+    public DemoDataListener(TeacherDao teacherDao) {
+        this.teacherDao = teacherDao;
+    }
+
+    /**
+     * 这个每一条数据解析都会来调用
+     *
+     */
+    @Override
+    public void invoke(Teacher teacher, AnalysisContext context) {
+
+        list.add(teacher);
+        // 达到BATCH_COUNT了，需要去存储一次数据库，防止数据几万条数据在内存，容易OOM
+        if (list.size() >= BATCH_COUNT) {
+            saveData();
+            // 存储完成清理 list
+            list.clear();
+        }
+    }
+
+    /**
+     * 所有数据解析完成了 都会来调用
+     *
+     */
+    @Override
+    public void doAfterAllAnalysed(AnalysisContext context) {
+        // 这里也要保存数据，确保最后遗留的数据也存储到数据库
+        saveData();
+
+    }
+
+    /**
+     * 加上存储数据库
+     */
+    private void saveData() {
+//        在这个地方可以调用dao  我们就直接打印数据了
+        System.out.println(list);
+    }
+}
+```
+
+> 注意：
+>
+> 1. 监听器这个类不能够被Spring管理，每次使用单独的new出来
+
+导入的代码如下：
+
+```java
+ /**
+     * 添加数据库用到的dao
+     */
+    @Autowired
+    private TeacherDao teacherDao;
+    /**
+     * 最简单的读
+     */
+    @Test
+    public void simpleRead() {
+        String fileName =  "/Users/lubingyang/Desktop/hhhh.xlsx";
+
+        // 这里 需要指定读用哪个class去读，然后读取第一个sheet 文件流会自动关闭
+        /**
+         * 参数1 要读取的文件
+         * 参数2 要读取的数据对应的实体类类对象
+         * 参数3 监听器对象 可以在创建的时候把dao当做参数传进去
+         */
+        EasyExcel.read(fileName, Teacher.class, new DemoDataListener(teacherDao)).sheet().doRead();
+
+
+    }
+```
+
+## 邮件发送
+
+### 一：导入依赖
+
+```xml
+<!--网易邮箱的依赖-->
+<dependency>  
+	<groupId>javax.mail</groupId>  
+	<artifactId>mail</artifactId>  
+	<version>1.4.7</version>  
+</dependency>
+```
+
+### 二：实现邮件发送
+
+```java
+
+import java.util.Properties;
+import javax.mail.*;
+import javax.mail.internet.*;
+ 
+public class DoSend {
+ 
+	private String from = "xxx_qz@126.com"; // 发件人邮箱地址
+	private String user = "xxx_qz@126.com"; // 发件人称号，同邮箱地址
+	private String password = "xxxqz126"; // 发件人邮箱客户端授权码
+ 
+	/**
+	 * 
+	 * @param to
+	 * @param text
+	 * @param title
+	 */
+	/* 发送验证信息的邮件 */
+	public boolean sendMail(String to, String text, String title) {
+		Properties props = new Properties();
+		props.setProperty("mail.smtp.host", "smtp.126.com"); // 设置发送邮件的邮件服务器的属性（这里使用网易的smtp服务器）
+		props.put("mail.smtp.host", "smtp.126.com"); // 需要经过授权，也就是有户名和密码的校验，这样才能通过验证（一定要有这一条）
+		props.put("mail.smtp.auth", "true"); // 用刚刚设置好的props对象构建一个session
+		Session session = Session.getDefaultInstance(props); // 有了这句便可以在发送邮件的过程中在console处显示过程信息，供调试使
+																// 用（你可以在控制台（console)上看到发送邮件的过程）
+		session.setDebug(true); // 用session为参数定义消息对象
+		MimeMessage message = new MimeMessage(session); // 加载发件人地址
+		try {
+			message.setFrom(new InternetAddress(from));
+			message.addRecipient(Message.RecipientType.TO, new InternetAddress(to)); // 加载收件人地址
+			message.setSubject(title); // 加载标题
+			Multipart multipart = new MimeMultipart(); // 向multipart对象中添加邮件的各个部分内容，包括文本内容和附件
+			BodyPart contentPart = new MimeBodyPart(); // 设置邮件的文本内容
+			contentPart.setContent(text, "text/html;charset=utf-8");
+			multipart.addBodyPart(contentPart);
+			message.setContent(multipart);
+			message.saveChanges(); // 保存变化
+			Transport transport = session.getTransport("smtp"); // 连接服务器的邮箱
+			transport.connect("smtp.126.com", user, password); // 把邮件发送出去
+			transport.sendMessage(message, message.getAllRecipients());
+			transport.close();
+		} catch (MessagingException e) {
+			e.printStackTrace();
+			return false;
+		}
+		return true;
+	}
+ 
+	public static void main(String[] args) { // 做测试用
+		DoSend ds = new DoSend();
+		ds.sendMail("917785909@qq.com", "你好，这是一封测试邮件，无需回复。", "测试邮件");
+	}
+}
+```
+
+## FastDFS
+
+1.导入依赖
+```xml
+<dependency>
+    <groupId>com.taoyuanx</groupId>
+    <artifactId>fastdfs-client-java</artifactId>
+    <version>1.29-RELEASE</version>
+</dependency>
+```
+2.在resource下创建配置文件，后缀 .properties
+```properties
+#配置文件
+connect_timeout = 2
+network_timeout = 30
+charset = UTF-8
+http.tracker_http_port = 8080
+http.anti_steal_token = no
+http.secret_key = FastDFS1234567890
+tracker_server = 192.168.217.136:22122
+```
+3.写fastdfs代码工具类
+```java
+//文件删除：返回0成功  返回其他失败
+    public static  int delete(String groupName,String fileName)throws Exception{
+        //读取配置文件获取tracker的主机位置
+        ClientGlobal.init("fdfs.conf");
+        //获取tracker的客户端
+        TrackerClient tc=new TrackerClient();
+        //获取tracker的服务器端
+        TrackerServer ts=tc.getTrackerServer();
+        //获取storage的客户端
+        StorageClient sc=new StorageClient(ts);
+        //调用stroage客户端的方法 进行文件操作
+        //参数1：组名
+        //参数2：文件名：  如M00/00/00/wKgCgF-JA5uAGSfAAAA9JxdpQHI55..jpg
+        int result=sc.delete_file(groupName,fileName);
+        System.out.println(result);
+        //关闭连接
+        sc.close();
+        return result;
+    }
+    //文件下载：返回0成功  返回其他失败 使用于java项目
+    public static  int download(String groupName,String fileName,String muDiPath)throws Exception{
+        ClientGlobal.init("fdfs.conf");
+        TrackerClient tc=new TrackerClient();
+        TrackerServer ts=tc.getTrackerServer();
+        StorageClient sc=new StorageClient(ts);
+        //参数1：组名
+        //参数2：文件名：  如M00/00/00/wKgCgF-JA5uAGSfAAAA9JxdpQHI55..jpg
+        //参数3： 目的文件的名字  后缀名需要和源文件一致
+        int result=sc.download_file(groupName,fileName,muDiPath+"/"+(fileName.substring(fileName.lastIndexOf("/"))));
+        System.out.println(result);
+        sc.close();
+        return result;
+    }
+    //文件下载：返回字节数组 适用于web项目
+    public static  byte[] download(String groupName,String fileName)throws Exception{
+        ClientGlobal.init("fdfs.conf");
+        TrackerClient tc=new TrackerClient();
+        TrackerServer ts=tc.getTrackerServer();
+        StorageClient sc=new StorageClient(ts);
+        //参数1：组名
+        //参数2：文件名：  如M00/00/00/wKgCgF-JA5uAGSfAAAA9JxdpQHI55..jpg
+        byte[] arr=sc.download_file(groupName,fileName);
+        System.out.println(arr.length+":::;");
+        sc.close();
+        return arr;
+    }
+    //文件上传 适用于java项目
+    public static  String[] upload(String fileName)throws Exception{
+        ClientGlobal.init("fdfs.conf");
+        TrackerClient tc=new TrackerClient();
+        TrackerServer ts=tc.getTrackerServer();
+        StorageClient sc=new StorageClient(ts);
+        //获取文件后缀名
+        String hzm=fileName.substring(fileName.lastIndexOf('.'));
+        //第一个参数 文件对应的字节数组
+        //第二个参数 文件的后缀名
+        //第三个参数  文件的属性信息  可以不用设置
+        String[] arr=sc.upload_file(fileName,hzm,null);
+        System.out.println(Arrays.toString(arr));
+        sc.close();
+        return arr;
+    }
+    //文件上传 适用于web项目
+    public static  String[] upload(byte[] bytes,String fileName)throws Exception{
+        ClientGlobal.init("fdfs.conf");
+        TrackerClient tc=new TrackerClient();
+        TrackerServer ts=tc.getTrackerServer();
+        StorageClient sc=new StorageClient(ts);
+        //获取文件后缀名
+        String hzm=fileName.substring(fileName.lastIndexOf('.'));
+        //第一个参数 文件对应的字节数组
+        //第二个参数 文件的后缀名
+        //第三个参数  文件的属性信息  可以不用设置
+        String[] arr=sc.upload_file(bytes,hzm,null);
+        System.out.println(Arrays.toString(arr));
+        sc.close();
+        return arr;
+    }
+```
+## thymeleaf 页面引擎
+1.添加依赖
+```xml
+<!--thymeleaf页面引擎-->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-thymeleaf</artifactId>
+</dependency>
+```
+2.thymeleaf在application配置文件中的配置
+```properties
+#Thymeleaf配置
+spring.thymeleaf.cache=false
+#页面编码
+spring.thymeleaf.encoding=utf-8
+#thymeleaf使用html的版本
+spring.thymeleaf.mode=HTML5
+#页面的前缀
+spring.thymeleaf.prefix=classpath:/templates/
+#页面的后缀
+spring.thymeleaf.suffix=.html
+```
+3.namespace:命名空间：
+```
+namespace: <html xmlns:th="http://www.thymeleaf.org">
+```
+4.Thymeleaf 页面语法：
+```html
+<!DOCTYPE html>
+<!--必须设置thymeleaf的命名空间-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+      <!--获取域属性-->
+      <!--字符串拼接1-->
+      <span th:text="'request域属性1:'+${stu}"></span><br/>
+      <!--字符串拼接2-->
+      <span th:text="|request域属性2:${stu}|"></span><br/>
+
+      <!--对象导航图：ognl-->
+      <span th:text="'狗的名字=:'+${stu.sdog.dname}"></span><br/>
+      <span th:text="'狗的名字=:'+${stu.getSdog().getDname()}"></span><br/>
+
+      <!--数学运算：三目运算符-->
+      <span th:text="${stu.score} gt 60 ? '及格了' : '不及格'"></span><br/>
+
+      <!--调用方法-->
+      <span th:text="${stu.sdate.getYear()+1900}"></span>年<br/>
+      <span th:text="${stu.sdate.getYear()}+1900"></span>年<br/>
+
+      <!--自定义变量-->
+      <p  th:object="${stu}">
+          sname=<span th:text="*{sname}"></span><br/>
+          score=<span th:text="*{score}"></span><br/>
+          sex=<span th:text="*{sex}"></span><br/>
+      </p>
+
+      <!--内置对象：#request #session #servletContext #response-->
+      <!--域对象：request session application response-->
+      request.server=<span th:text="${#request.getMethod()}"></span><br/>
+      response.charset=<span th:text="${#response.getCharacterEncoding()}"></span><br/>
+      aa=<span th:text="${session.aa}"></span><br/>
+      bb=<span th:text="${#servletContext.getAttribute('bb')}"></span><br/>
+      bb=<span th:text="${application.bb}"></span><br/>
+
+      <!--选择结构：if  switch-->
+      <span th:if="${stu.sex} == '女'"> 女生1你好</span>
+      <span th:if="${stu.sex} == '男'"> 先生你好</span><br/>
+      <p th:switch="${stu.sex}">
+          <span th:case="女">女生你好！</span>
+          <span th:case="男">男生你好！</span>
+          <span th:case="*">回泰国去！</span>
+      </p>
+
+       <!--循环结构：each-->
+       <p th:each="listit,stat:${stu.list}">
+           <span th:text="|${stat.index}:${listit}|"></span><br/>
+       </p>
+</body>
+</html>
+```
+
+## HttpClient
+**介绍：主要是模仿浏览器发出请求**
+
+1.导入maven依赖
+```xml
+<!--httpclient-->
+<dependency>
+    <groupId>org.apache.httpcomponents</groupId>
+    <artifactId>httpclient</artifactId>
+    <version>4.5.5</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.httpcomponents</groupId>
+    <artifactId>httpmime</artifactId>
+    <version>4.5.5</version>
+</dependency>
+```
+
+
+```java
+    public static void httpClientTest() throws IOException {
+//        创建客户端
+        CloseableHttpClient build = HttpClientBuilder.create().build();
+//        创建get请求，此方式可以师get,post,delete,put 等等。。。都可以
+        HttpPost httpPost = new HttpPost("http://localhost:8080/select?name=kkk&age=18");
+
+
+//===========================================================================================================================================
+//        注意发送什么样的请求，就往什么样的请求对象中添加要发送的数据，例如：httpPost请求，就往httpPost请求中添加数据就行
+//        1.发送普通参数
+//            方式一：直接拼接字符串
+
+
+//        2.发送对象即发送json字符串，把对象变成json字符串
+        //设置请求头的内容类型
+        httpPost.setHeader("Content-Type", "application/json;charset=UTF-8");
+        //设置请求体的json字符串
+        StringEntity jsonEntity = new StringEntity("JSON字符串", "UTF-8");
+        //把strong类型的请求体放在httpost的请求体中
+        httpPost.setEntity(jsonEntity);
+
+
+//        3.发送 application/x-www-form-urlencoded 格式的表单数据
+        //设置httpPost请求的请求头
+        httpPost.setHeader("Content-Type", "application/x-www-from-urlencoded");
+        //创建 BasicNameValuePair 类型的 arraylist 集合
+        ArrayList<BasicNameValuePair> basicNameValuePairs = new ArrayList<>();
+        basicNameValuePairs.add(new BasicNameValuePair("name", "张三"));
+        basicNameValuePairs.add(new BasicNameValuePair("age", "18"));
+        //把表单集合生成表单实体，编码是utf-8
+        UrlEncodedFormEntity urlEncodedFormEntity = new UrlEncodedFormEntity(basicNameValuePairs, StandardCharsets.UTF_8);
+        //给httpPost添加表单数据主体
+        httpPost.setEntity(urlEncodedFormEntity);
+
+
+//        4.发送文件
+        MultipartEntityBuilder multipartEntityBuilder = MultipartEntityBuilder.create();
+        //多个文件用一个keys,上传时可以用文件集合进行接收
+        String keys = "files";
+        multipartEntityBuilder.addBinaryBody(keys, new File("D://sdf"));
+        multipartEntityBuilder.addBinaryBody(keys, new File("D://sdf"));
+        //除文件外，还能附带其他参数
+        //contentType指定上传文件附带参数的文件类型
+        ContentType contentType = ContentType.create("text/plsin", Charset.forName("UTF-8"));
+        multipartEntityBuilder.addTextBody("name", "张三", contentType);
+        multipartEntityBuilder.addTextBody("age", "18", contentType);
+        //构建文件实体
+        HttpEntity build1 = multipartEntityBuilder.build();
+        //把文件的实体放进httpPost的请求体中
+        httpPost.setEntity(build1);
+
+
+//        5.发送文件流
+        //创建字节数组的集合
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream("sdf".getBytes());
+        //创建字节流实体
+        InputStreamEntity inputStreamEntity = new InputStreamEntity(byteArrayInputStream);
+        //把字节流实体放进httpPost的请求体中
+        httpPost.setEntity(inputStreamEntity);
+
+//===================================================================================================
+
+
+
+
+//        由客户端执行发送当前的请求对象
+        CloseableHttpResponse execute = build.execute(httpPost);
+//        获取响应实体，服务器响应的实体对象
+        HttpEntity entity = execute.getEntity();
+
+//      注意：获取响应实体后可以从响应实体对象中获取数据，服务器响应的数据
+
+//        关闭响应实体
+        execute.close();
+//        关闭客户端
+        build.close();
+    }
+```
+
+
+## 阿里云OSS数据库操作
+
+1.导入maven依赖
+```xml
+<!--阿里云oss文件上传-->
+<dependency>
+    <groupId>com.aliyun.oss</groupId>
+    <artifactId>aliyun-sdk-oss</artifactId>
+    <version>3.11.1</version>
+</dependency>
+```
+2.工具代码
+```java
+ /**
+     * <p>
+     * 解释说明：单个oss文件删除
+     * </p>
+     *
+     * @param deleteFilesPath 传入单个，包括文件名在内的文件路径
+     */
+
+    //   单个oss文件删除
+    public static void fileDeletion(String deleteFilesPath) {
+        // <yourObjectName>表示删除OSS文件时需要指定包含文件后缀在内的完整路径，例如abc/efg/123.jpg。
+        String objectName = deleteFilesPath;
+        // 创建OSSClient实例。
+        OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
+        // 删除文件。
+        ossClient.deleteObject(bucketName, objectName);
+        // 关闭OSSClient。
+        ossClient.shutdown();
+    }
+
+    /**
+     * <p>
+     * 解释说明：对 ‘ OSS ’ 数据库中的文件进行批量删除
+     * </p>
+     *
+     * @param keys 传入要删除名字的集合，keys 等同于，包含文件后缀在内的完整路径，例如abc/efg/123.jpg
+     * @return 返回删除的所有文件和目录的名字
+     */
+    //    批量删除文件    返回值 删除的文件夹名字
+    public static List<String> batchDeleteFiles(List<String> keys) {
+        // 创建OSSClient实例。
+        OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
+        // 删除文件。key等同于ObjectName，表示删除OSS文件时需要指定包含文件后缀在内的完整路径，例如abc/efg/123.jpg。
+//        List<String> keys = new ArrayList<String>();
+//        keys.add("key0");
+//        keys.add("key1");
+//        keys.add("key2");
+        DeleteObjectsResult deleteObjectsResult = ossClient.deleteObjects(new DeleteObjectsRequest(bucketName).withKeys(keys));
+        List<String> deletedObjects = deleteObjectsResult.getDeletedObjects();
+        System.out.println(deletedObjects);
+        // 关闭OSSClient。
+        ossClient.shutdown();
+        return deletedObjects;
+    }
+
+    
+    /**
+     * <p>
+     * 文件流上传
+     * </p>
+     *
+     * @param fileName    文件上传后，保存在数据库的名字
+     * @param inputStream 文件的字节流
+     * @return 回调对象，有自己需要的数据
+     */
+    //    简单的文件流上传
+    public static PutObjectResult fileStreamUpload(String fileName, InputStream inputStream) throws FileNotFoundException {
+        // 创建OSSClient实例。
+        OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
+        // 上传文件流。
+//        InputStream inputStream = new FileInputStream("D:\\files\\Java\\java_files_Note\\Jedis配置和使用.txt");
+        PutObjectResult putObjectResult = ossClient.putObject(bucketName, fileName, inputStream);
+        // 关闭OSSClient。
+        ossClient.shutdown();
+        return putObjectResult;
+    }
+
+    /**
+     * @param downloadPath 文件在数据库中的路径，包括文件名
+     * @return 返回一个当前要下载文件的字节流
+     */
+
+    //    简单的文件流下载
+    public static InputStream documentDowload(String downloadPath) throws IOException {
+        // <yourObjectName>从OSS下载文件时需要指定包含文件后缀在内的完整路径，例如abc/efg/123.jpg。
+        String objectName = downloadPath;
+        // 创建OSSClient实例。
+        OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
+        // 调用ossClient.getObject返回一个OSSObject实例，该实例包含文件内容及文件元信息。
+        OSSObject ossObject = ossClient.getObject(bucketName, objectName);
+        // 调用ossObject.getObjectContent获取文件输入流，可读取此输入流获取其内容。
+        InputStream content = ossObject.getObjectContent();
+        // 关闭OSSClient。
+        ossClient.shutdown();
+        return content;
+    }
+```

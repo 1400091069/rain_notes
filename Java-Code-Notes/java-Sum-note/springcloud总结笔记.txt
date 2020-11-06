@@ -1,0 +1,716 @@
+**注意：spring中的所有微服务都必须注册进 eureka 的注册中心中否则，其他组件使用时有可能会报错**
+
+## 1.创建父工程和子工程
+
+### <1>创建父工程
+
+作用：管理子模块的maven依赖
+
+创建maven版的web项目作为父工程
+
+**父工程创建要点：**
+
+1.打包方式
+
+2.继承springboot父工程，
+
+3.管理并导入springcloud的依赖
+
+4.导入测试依赖
+
+5.导入并构建maven插件
+
+6.创建子工程时 父工程 的pom 依赖中要有 modules 标签，来管理子工程的 module
+
+友情提示：父工程有的依赖，子工程就不用再引入了，会自动引用父工程的依赖，包括 插件 也一样
+
+**注意** ：springcloud和springboot的版本要对应
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.example</groupId>
+    <artifactId>springbootserver</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <!--modules 继承父项目的子项目-->
+    <modules>
+        <!--子项目的项目名-->
+        <module>eureka</module>
+        <module>eureka_client</module>
+    </modules>
+    <!--父项目的打包方式-->
+    <packaging>pom</packaging>
+
+    <!--继承的父项目-->
+    <parent>
+        <!-- springboot项目依赖 -->
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.3.4.RELEASE</version>
+        <relativePath/>
+    </parent>
+    <!--对springcloud项目进行管理的标签-->
+    <dependencyManagement>
+        <dependencies>
+            <!-- springcloud项目依赖 -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>Hoxton.SR8</version>
+                <type>pom</type>
+                <!--注意：此scope模式一定要改成 import 不然子模块引用不了父工程-->
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <!--添加springboot的测试依赖包-->
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--springboot项目的web依赖-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+    </dependencies>
+
+    <!--maven插件-->
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+```
+
+### <2>创建子工程：
+
+1.修改父工程的继承
+
+2.父工程有的 所有依赖都不用再重新导入会自动引用父工程的依赖，包括maven插件一类的依赖也一样
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <!--继承父工程：可以在父工程的pom依赖中直接复制过来-->
+    <parent>
+        <!--父工程的组名-->
+        <groupId>org.example</groupId>
+        <!--父工程的项目名-->
+        <artifactId>springbootserver</artifactId>
+        <!--父工程的版本-->
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <groupId>com.zhiyou100</groupId>
+    <artifactId>eureka</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>eureka</name>
+    <!--创建子项目的打包方式-->
+    <packaging>pom</packaging>
+    <description>Demo project for Spring Boot</description>
+
+    <dependencies>
+        <!--eureka服务端相关依赖-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
+        </dependency>
+    </dependencies>
+</project>
+```
+
+## 2.Eureka:服务注册与发现
+
+### <1>配置 eureka 服务端:
+
+#### 1.导入依赖
+
+```xml
+<!--eureka服务端相关依赖-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
+</dependency>
+```
+
+#### 2.写配置文件
+
+```properties
+# 设置 eureka 的端口
+server.port=3333
+
+# 通过禁止 eureka 自己注册自己，禁止 eureka 获取注册表来证明，这是一个
+
+
+#禁止 eureka 自己注册自己
+eureka.client.register-with-eureka=false
+#禁止 eureka 获取注册表
+eureka.client.fetch-registry=false
+# 设置 eureka 注册服务的地址，必须设置,客户端和服务端的要一致
+eureka.client.service-url.defaultZone=http://localhost:3333/eureka
+
+# 开启或关闭eureka的自我保护模式：建议不要进行设置
+eureka.server.enable-self-preservation=false
+```
+
+### <2>配置 eureka 客户端：
+
+#### 1.导入依赖
+
+```xml
+<!--eureka客户端依赖-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+</dependency>
+```
+
+#### 2写配置文件
+
+```properties
+# eureka 客户端的默认端口
+server.port=4444
+# 客户端的应用程序名，主要用来注册进eureka的注册中心内
+spring.application.name=server-user
+# eureka 客户端，要注册的位置，即，eureka 服务端的路径
+eureka.client.service-url.defaultZone=http://localhost:3333/eureka/
+```
+
+## 3.Ribbon+Feign实现负载均衡
+
+### 1.Ribbon原生版
+
+#### 1.导入依赖
+
+```xml
+<!--Ribbon相关依赖-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-ribbon</artifactId>
+</dependency>
+```
+
+#### 2.创建springboot Bean的配置类
+
+把 RestTemplate 交给 spring进行管理有利于 我们进行管理，
+
+可以在 配置的类上 加上 @LoadBalanced  注解 ，使此对象 进行负载均衡
+
+```java
+@Configuration
+public class configs {
+    /**
+     * RestTemplate 对象解释：此对象是进行微服务之间进行访问的对象，有和 httpClient 相同的功能
+     * 不过此对象仅限在 springCloud 项目中使用
+     */
+    @Bean   //把RestTemplate对象交给spring 进行托管
+    @LoadBalanced //开启 Ribbon的 负载均衡
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+}
+```
+
+#### 3.发送请求进行负载均衡
+
+```java
+@Controller
+@RestController
+public class Test01 {
+    @Autowired
+    RestTemplate restTemplate;
+
+    @RequestMapping("/test01")
+    public Object test001() {
+        //发送的请求，中的ip 地址 要用，eureka 注册中心中的 实例名 进行代替，
+        //注意：也就是说：要进行负载均衡的所有服务器都要在 eureka 注册中心进行注册，
+        //     且注册的实例名必须一样
+        return restTemplate.getForObject("http://TEST/test", Object.class);
+    }
+}
+```
+
+#### 总结：Ribbon 利用 RestTemplate 对象 ，对 eureka 注册中心 ，实例名一样的多个微服务，进行负载均衡
+
+### 2.Feign版Ribbon
+
+不用再使用 RestTemplate 对象
+
+#### 1.导入依赖
+
+```xml
+<!--feign相关依赖-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
+</dependency>
+```
+
+#### 2.启动类开启Feign注解
+
+```java
+@SpringBootApplication
+@EnableFeignClients //启动类开启 Feign 注解
+public class RibbonApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(RibbonApplication.class, args);
+    }
+
+}
+```
+
+#### 3.业务层向微服务发送请求
+
+注意：创建业务层接口即可，不用创建业务层的实现类
+
+```java
+//注册中心要进行负载均衡的 实例名
+@FeignClient("TEST")
+public interface Feign {
+    //value : 要发送的请求 ， method : 发送请求的方法类型   produces : 要发送请求的的 内容类型
+    @RequestMapping(value = "/test",method = RequestMethod.GET,produces = "application/json;charset=UTF-8")
+    Object test001();
+}
+```
+
+#### 4.控制层正常调用业务层即可
+
+```java
+@Controller
+@RestController
+public class Test01 {
+    @Autowired
+    Feign feign;
+
+    @RequestMapping("/test01")
+    public Object test001() {
+        return feign.test001();
+    }
+}
+```
+
+## 4.Hystrix 熔断器
+
+### 1.服务接收端进行熔断
+
+#### 1.导入maven依赖
+
+```xml
+<!--Hystrix相关的依赖-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
+</dependency>
+```
+
+#### 2.在启动类上开启Hystrix注解
+
+```java
+@SpringBootApplication
+@EnableHystrix //开启Hystrix注解
+public class Test02Application {
+
+    public static void main(String[] args) {
+        SpringApplication.run(Test02Application.class, args);
+    }
+
+}
+```
+
+#### 3.在接收请求的Controller控制层，上的方法上添加注解
+
+解释：当此方法，抛出异常时，进行熔断
+
+```java
+@Controller
+@RestController
+public class Test02 {
+    @RequestMapping("/test")
+//    添加 @HystrixCommand 注解
+//    fallbackMethod : 要调用的方法名
+//    抛出异常时调用其他方法，是调用，不是重新发出请求
+    @HystrixCommand(fallbackMethod = "err")
+    public Object test01() {
+        throw  new RuntimeException("8003 : test02 抛出异常！ ");
+    }
+
+    public String err() {
+        return "{\"test02\":\"=====tets02报错了====！\"}";
+    }
+}
+```
+
+### 2.Feign负载均衡端进行熔断
+
+不用添加依赖，Fegin 内部 自带 Hystrix 的依赖
+
+#### 1.修改 Feign的配置文件
+
+```properties
+# 开启的Feign的 Hystrix 功能
+feign.hystrix.enabled=true
+```
+
+#### 2.修改 feign 接口上的注解参数
+
+```java
+/**
+ * 修改 @FeignClient 注解参数
+ * value : 注册中心进行负载均衡的实例名
+ * fallback : 当前接口的实现类的 class文件 
+ *      fallback解释：当前接口发出的请求，返回异常时，要找当前接口的实现类的指定方法，
+ *      指定方法即当前哪个方法发出的请求，就找实现类中对应的方法，进行执行
+ * */
+@FeignClient(value = "TEST",fallback = Feignimpl.class)
+public interface Feign {
+    @RequestMapping(value = "/test",method = RequestMethod.GET,produces = "application/json;charset=UTF-8")
+    Object test001();
+}
+```
+
+#### 3.创建feign接口的实现类
+
+解释：接口发出请求时，返回异常自动调用当前接口的实现类
+
+注意，此实现类一定要交给spring托管，不然会报错
+
+```java
+@Component //把feign的实现类交给spring进行托管
+public class Feignimpl implements Feign{
+    @Override
+    public Object test001() {
+        return "{\"test001\":\"抛出异常，熔断成功并返回！\"}";
+    }
+}
+```
+
+### 3.Hystrix的图形界面
+
+#### 1).单例监控
+
+##### 1.Hystrix,服务端(server)配置
+
+###### 1.单独创建hystrix监控微服务模块 ，导入依赖
+
+```xml
+<!--hystrix-dashboard有关的依赖-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-hystrix-dashboard</artifactId>
+</dependency>
+```
+
+###### 2.写配置文件
+
+```properties
+# hystrix监控微服务的地址
+hystrix.dashboard.proxy-stream-allow-list=localhost
+```
+
+###### 3.在启动类上添加注解
+
+```java
+@SpringBootApplication
+@EnableHystrixDashboard //开启 HystrixDashboard 的监控服务
+public class HystrixDashboardApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(HystrixDashboardApplication.class, args);
+    }
+
+}
+```
+
+##### 2.Hystrix,客户端(client)配置，此客户端整合了Feign
+
+###### 1.导入依赖
+
+```xml
+<!--hystrix 要监控的节点-->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+
+<!--Hystrix相关的依赖-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
+</dependency>
+```
+
+###### 2.修改配置文件
+
+```properties
+# 配置熔断器监控依赖,暴露endpoints 接口，即暴露监控信息，也可以写星号 '*' 暴露全部监控信息
+management.endpoints.web.exposure.include=hystrix.stream
+```
+
+###### 4.创建配置类,使此被监控的客户端注册进hystrix中
+
+```java
+@Configuration
+public class HystrixServletDefinitions {
+
+    @Bean
+    public ServletRegistrationBean getServlet() {
+        HystrixMetricsStreamServlet streamServlet = new HystrixMetricsStreamServlet();
+        ServletRegistrationBean registrationBean = new ServletRegistrationBean(streamServlet);
+        registrationBean.setLoadOnStartup(1);
+        registrationBean.addUrlMappings("/hystrix.stream");
+        registrationBean.setName("HystrixMetricsStreamServlet");
+        return registrationBean;
+    }
+}
+```
+
+###### 5.在启动类上添加注解，开启监控服务
+
+```java
+@SpringBootApplication
+@EnableFeignClients
+@EnableHystrix //添加注解开启Hystrix的监控功能
+public class RibbonApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(RibbonApplication.class, args);
+    }
+
+}
+```
+
+#### 2)集群监控
+
+## 5.ZUUL网关
+
+### 1) 基本路由功能
+
+#### 1.导入依赖
+
+```xml
+<!--zuul网关必须要注册进eureka的注册中心才能有效使用-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+</dependency>
+<!--zuul网关的相关依赖-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-zuul</artifactId>
+</dependency>
+```
+
+#### 2.写配置文件
+
+```properties
+
+# 第一个拦截服务
+# zuul 网关接收的请求
+zuul.routes.user.path=/test01
+# eureka注册中心的服务，即注册中心服务的实例名，此配置代表上方接收拦截的路径由这个服务去完成响应
+zuul.routes.user.service-id=ribbon
+
+# 第二个拦截服务
+# zuul 网关接收的请求
+zuul.routes.user.path=/user/*
+# eureka注册中心的服务，即注册中心服务的实例名，此配置代表上方接收拦截的路径由这个服务去完成响应
+zuul.routes.user.service-id=ribbon
+
+# 注意：上方是成对配置的，可以配置多个，可以使用'*'星号通配符，
+# 但必须要按顺序来，按照，[一个拦截路径，一个服务],依次往下排列。。。
+# zuul网关拦截的一个路径，下面必须有一个服务
+# 不能两个路径下方一个服务，一个服务上方多个服务
+```
+
+#### 3.在启动类上添加zuul网关的注解
+
+```java
+@SpringBootApplication
+@EnableZuulProxy //开启zuul网关注解
+public class ZuulApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(ZuulApplication.class, args);
+    }
+
+}
+```
+
+### 2) 过滤器功能
+
+#### 1.新建类，继承 ZuulFilter 类
+
+```java
+/**
+ * @author Rain
+ */
+public class ZuulFilters extends ZuulFilter {
+    /**
+     * 拦截器的类型:返回值即类型  (看源码)
+     * pre : 路由之前
+     * routing：路由之时
+     * post： 路由之后
+     * error：发送错误时进行拦截调用
+     */
+    @Override
+    public String filterType() {
+        return "pre";
+    }
+
+    /**
+     * 通过int值来定义过滤器的执行顺序，数值越小优先级越高。
+     * 主要来定义当前过滤器的执行优先级级别
+     * 其他类型的执行器都有默认的执行顺序数值，可以上网上查看
+     */
+    @Override
+    public int filterOrder() {
+        return 0;
+    }
+
+    /**
+     * shouldFilter : 是否过滤
+     * false 不过滤 – 不再执行后续的run方法
+     * true  过滤  - 执行后续的run方法真正的过滤
+     */
+    @Override
+    public boolean shouldFilter() {
+        return true;
+    }
+
+    /**
+     * run 上方方法都执行后才执行的方法
+     * 真正的过滤逻辑:验证session,token,cookie,请求参数
+     */
+    @Override
+    public Object run() throws ZuulException {
+        return null;
+    }
+}
+```
+
+#### 2.将新建类加入spring 容器
+
+```java
+@Configuration
+public class config {
+//    把zuul的过滤器交给spring容器去管理，zuul的过滤器才能生效
+    @Bean
+    public ZuulFilters getZuulFilter(){
+        return new ZuulFilters();
+    }
+
+}
+```
+
+**友情提示**：可以自定义zuul过滤器使用不使用，不配置zuul的过滤器，默认不使用
+
+```properties
+zuul.SendResponseFilter.post.disable=true
+# 直接类名,过滤器的类型,它是POST类型,disable等于true,那我们看一下过滤器的类型是不是POST,这样你就可以禁用这个过滤器了
+```
+
+## 6.spring cloud config 分布式配置
+
+原理解释：配置中心把git上仓库复制到本地，直接在本地的配置中心调用，不用再从网络上调用
+
+### 1）config服务端  ,  配置中心
+
+#### 1.导入依赖
+
+```xml
+<!--config 配置中心 服务端的依赖-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-config-server</artifactId>
+</dependency>
+```
+
+#### 2.写配置文件
+
+```properties
+# git仓库的远程地址
+spring.cloud.config.server.git.uri=https://gitee.com/test.git
+# 从那个 git 的分支上拉取到本地
+spring.cloud.config.label=master
+
+
+# config默认只加载一条路径下的所有文件，不配置指定要加载的路径，默认加载根路径下的文件，文件夹中的文件获取不到
+# 加载 git 上指定路径的目录下的所有文件
+spring.cloud.config.server.git.search-paths=spring_cloud_config
+
+# 注意：如果github上的仓库是私有的，还需要添加github的账号和密码，公有仓库则不用
+spring.cloud.config.server.git.username=用户名
+spring.cloud.config.server.git.password=密码
+
+```
+
+#### 3.在启动类上添加注解
+
+```java
+@SpringBootApplication
+@EnableConfigServer   // config 服务端 开启配置中心服务
+public class ConfigsApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(ConfigsApplication.class, args);
+    }
+
+}
+```
+
+### 2）config 客户端
+
+#### 1.导入依赖
+
+```xml
+<!--config 客户端依赖-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-config</artifactId>
+</dependency>
+```
+
+#### 2.创建 bootstrap.properties 文件
+
+解释：bootstrap.properties 比 application.properties的启动优先级高，
+
+所以使用此配置文件在springboot未启动完成前，向config配置中心去拉取配置文件进行加载比较合适
+
+```properties
+# config 配置中心的服务地址
+spring.cloud.config.uri=http://localhost:3223/
+# config配置中心引入的分支名称
+spring.cloud.config.label=master
+# 需要从github上读取的资源名称，注意没有后缀名
+spring.cloud.config.name=eurekaconfig
+```
+
+#### 3.在启动类上添加注解
+
+注意：eureka 服务端 添加  @EnableEurekaServer 注解
+
+​			eureka 客户端 添加  @EnableEurekaClient  注解
+
+#### 4.启动服务，进行测试！
+

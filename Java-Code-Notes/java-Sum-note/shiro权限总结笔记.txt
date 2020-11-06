@@ -1,0 +1,490 @@
+ **注意**：shiro的ini文件和realm域是一个东西，区别：ini是写死的数据，realm域能从数据库中获取数据
+
+**realm域有两种**：1.实现realm接口：作用:只支持，登录认证，不支持授权
+
+​								2.继承AuthorizingRealm 作用: 支持登录，也支持授权
+
+**警告**：只有shiro进行登录了之后才能对角色和权限进行自动判断，
+
+**在 web，spring , springboot项目中，用户发出登录请求时直接获取 subject 主体进行 登录认证和角色，权限的授权**
+
+**友情提示**：用户的信息，角色，权限，等信息，最终都是存放在session里面的，所以只进行一次登录认证就可以进行相关的权限认证
+
+## **Shiro 基础版**
+
+**此方法不用shiro的拦截器，需要自己手动配置拦截器并进行登录认证和权限认证,用了shiro自带的拦截器就不用自己进行拦截和验证了，一般在spring项目和springboot项目中可以使用拦截器**
+
+### 1.导入依赖
+
+```xml
+<!--shiro权限框架-->
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-simple</artifactId>
+    <version>1.7.21</version>
+</dependency>
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>jcl-over-slf4j</artifactId>
+    <version>1.7.21</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shiro</groupId>
+    <artifactId>shiro-core</artifactId>
+    <version>1.2.2</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shiro</groupId>
+    <artifactId>shiro-web</artifactId>
+    <version>1.2.2</version>
+</dependency>
+```
+
+### 2.写ini文件指定realm域
+
+**一般指定继承了 AuthorizingRealm 类的类路径**
+
+```ini
+test02=com.zhiyou100.test.test02
+securityManager.realms=$test02
+```
+
+### 3.写realm域
+
+**创建test02类，继承 AuthorizingRealm** 
+
+**作用：进行认证和授权**
+
+```java
+public class test02 extends AuthorizingRealm {
+    @Override
+    protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principalCollection) {
+        //    获取用户名
+        String primaryPrincipal = (String) principalCollection.getPrimaryPrincipal();
+        //    根据用户名，查询数据库
+        String a = "zs";
+        //    创建集合，把从数据库中查询到的角色，添加进集合里面
+        ArrayList<String> jaose = new ArrayList<String>();
+        jaose.add("员工");
+        jaose.add("管理员");
+        //    创建集合，把从数据库中查询到的权限，添加进集合里面
+        ArrayList<String> quanxian = new ArrayList<String>();
+        quanxian.add("user/add");
+        quanxian.add("user/delete");
+        //    把角色集合和权限集合添加进SimpleAuthorizationInfo()对象里面，并返回
+        SimpleAuthorizationInfo info = new SimpleAuthorizationInfo();
+//        添加角色集合
+        info.addRoles(jaose);
+//        添加权限集合
+        info.addStringPermissions(quanxian);
+//      返回此SimpleAuthorizationInfo对象，把此对象的角色和权限保存到session域里面
+        return info;
+    }
+
+    @Override
+    protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken authenticationToken) throws AuthenticationException {
+//        用户名
+        String principal = (String) authenticationToken.getPrincipal();
+//        密码
+        char[] credentials = (char[]) authenticationToken.getCredentials();
+//        把char数组类型的密码变成string类型
+        String string = new String(credentials);
+        if ("ls".equals(principal)||"123456".equals(string)) {
+            return null; //返回null shiro就会自动帮我们抛出 UnknownAccountException 异常
+        }
+//        返回SimpleAuthenticationInfo对象，
+//        返回参数说明：
+//        参数1：要传给上方授权方法的账号
+//        参数2：shiro会帮自己进行 tocken 和自己返回的 数据库密码参数 进行比对，自己只需要传入从数据库查询到的密码即可
+//        参数3：当前缓存域的名字，直接 getName() 方法返回即可
+        return new SimpleAuthenticationInfo(principal, new String(credentials), getName());
+    }
+}
+```
+
+### 4.测试认证授权代码
+
+```java
+    public static void main(String[] args) {
+        
+        IniSecurityManagerFactory iniSecurityFactory = new IniSecurityManagerFactory("classpath:shiro.ini");
+        SecurityManager instance = iniSecurityFactory.getInstance();
+        SecurityUtils.setSecurityManager(instance);
+//      获取实体类
+        Subject subject1 = SecurityUtils.getSubject();
+
+//      账户认证
+        UsernamePasswordToken usernamePasswordToken = new UsernamePasswordToken("ls", "123456");
+        try {
+            subject1.login(usernamePasswordToken);
+        } catch (AuthenticationException e) {
+            System.out.println("账户或密码错误！");
+        }
+//      判断角色
+        ArrayList<String> strings = new ArrayList<>();
+        strings.add("nisdf");
+        boolean[] booleans = subject1.hasRoles(strings);
+        System.out.println(Arrays.toString(booleans));
+//      权限
+        String[] competence = {"/io","/p","k"};
+        boolean[] permitted = subject1.isPermitted(competence);
+        System.out.println(Arrays.toString(permitted));
+
+    }
+```
+
+## Shiro web版
+
+### 1.导入依赖
+
+```xml
+<!--shiro权限框架-->
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-simple</artifactId>
+    <version>1.7.21</version>
+</dependency>
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>jcl-over-slf4j</artifactId>
+    <version>1.7.21</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shiro</groupId>
+    <artifactId>shiro-core</artifactId>
+    <version>1.2.2</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.shiro</groupId>
+    <artifactId>shiro-web</artifactId>
+    <version>1.2.2</version>
+</dependency>
+```
+
+### 2.写web.xml的shiro拦截器
+
+```xml
+<!-- 配置shiro监听器 -->
+	<listener>
+		<listener-class>org.apache.shiro.web.env.EnvironmentLoaderListener</listener-class>
+	</listener>
+
+	<!-- 加载并初始化shiro的配置文件 -->
+	<context-param>
+		<param-name>shiroConfigLocations</param-name>
+		<param-value>classpath:shiro-web.ini</param-value>
+	</context-param>
+	<filter>
+		<filter-name>ShiroFilter</filter-name>
+		<filter-class>org.apache.shiro.web.servlet.ShiroFilter</filter-class>
+	</filter>
+
+	<filter-mapping>
+		<filter-name>ShiroFilter</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+
+```
+
+### 3.配置ini文件
+
+**内部配置，realm域的路径，要放行的静态资源**
+
+### 4.写realm域
+
+**和上方基础版的realm域的写法一样**
+
+### 5.登录认证授权和登出清空realm域数据
+
+直接在登录请求上获取主体，进行 登录认证，授权 和 清空realm数据的登出操作
+
+```java
+//		执行登录操作
+//      获取主体
+        Subject subject1 = SecurityUtils.getSubject();
+
+//      账户认证
+        UsernamePasswordToken usernamePasswordToken = new UsernamePasswordToken("ls", "123456");
+        try {
+            subject1.login(usernamePasswordToken);
+        } catch (AuthenticationException e) {
+            System.out.println("账户或密码错误！");
+        }
+
+
+//  执行登出操作
+
+//      获取主体
+        Subject subject = SecurityUtils.getSubject();
+//      清空shiro内部realm域的数据
+        subject.logout();
+
+```
+
+## Shiro spring版
+
+此方式可以使用拦截器
+
+注意：登录过后就可以自动对权限进行认证
+
+### 1.导入依赖
+
+```xml
+<!-- shiro -->
+		<dependency>
+			<groupId>org.apache.shiro</groupId>
+			<artifactId>shiro-core</artifactId>
+			<version>1.2.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.shiro</groupId>
+			<artifactId>shiro-web</artifactId>
+			<version>1.2.2</version>
+		</dependency>
+		<!-- shiro与Spring整合 -->
+		<dependency>
+            <groupId>org.apache.shiro</groupId>
+            <artifactId>shiro-spring</artifactId>
+            <version>1.2.5</version>
+        </dependency>
+
+```
+
+### 2.写web.xml的shiro拦截器
+
+由于spring整合shiro的配置文件，所以不用再次加载shiro的配置文件了
+
+```xml
+<!-- Shiro的拦截器 
+		filter-name 要与Spring中的ShiroFilterFactoryBean的id保持一致
+	-->
+	<filter>
+		<filter-name>shiroFilter</filter-name>
+		<filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+	</filter>
+	<filter-mapping>
+		<filter-name>shiroFilter</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+
+```
+
+### 2.整合shiro配置文件
+
+```xml
+<!--===================spring整合Shiro======================-->
+<!--创建自定义Realm对象，即就是自己的realm域的路径-->
+<bean id="myRealm1" class="loginController.MyRealm1"></bean>
+
+<!--创建SecurityManager,并注入自定义Realm-->
+<bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+    <property name="realm">    <ref bean="myRealm1"></ref>  </property>
+</bean>
+
+<!--Shiro的Web过滤器id必!须!是!web.xml中配置的Shiro过滤器的filter-name-->
+<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+		<property name="securityManager" ref="securityManager"></property>
+		<!--登录的url:相当于ini文件中的authc.loginUrl=/login-->
+		<property name="loginUrl" value="/login.html"></property>
+		<!--认证授权失败跳转的错误页面:相当于是ini文件中
+		roles.unauthorizedUrl=/error.jspperms.unauthorizedUrl=/error.jsp-->
+		<property name="unauthorizedUrl" value="/login.html"></property>
+		<!--配置的拦截路径:相当于是ini文件中的[urls]配置-->
+		<property name="filterChainDefinitions">
+			<value>
+                <!--从上至下的逐一匹配-->
+                <!--静态资源放行-->
+                /assets/**=anon
+                /Css/**=anon
+                /front/**=anon
+                /Images/**=anon
+                /Js/**=anon
+                <!--普通页面放行：anon可以匿名访问-->
+                /index.jsp=anon
+                /index=anon
+                /error.jsp=anon
+                /login.jsp=anon
+                /login.do=anon
+                /logout.do=logout
+                <!--首页需要认证：authc需要认证-->
+                /registration/*=authc
+                /user/index.do=authc
+                <!--该路径需要认证且必须有admin角色才可以访问,在Realm中进行授权-->
+                /user/add.do=authc,roles[admin]
+                <!--该路径需要认证且必须有/user/delete权限才可以访问,在Realm中进行授权-->
+                /user/delete.do=authc,perms["/user/delete"]
+                <!--从上至下依次匹配路径,如果以上都没匹配成功,走最后一个/**-->
+                /**=authc
+		</value>
+	</property>
+</bean>
+```
+
+### 3.写realm域
+
+和上方基础版的realm域写法一样
+
+### 4.登录认证授权和登出清空realm域数据
+
+直接在登录请求上获取主体，进行 登录认证，授权 和 清空realm数据的登出操作
+
+```java
+ 	@RequestMapping("/login")
+    @ResponseBody
+    public String login(String account, String password) {
+//        获取主体
+        Subject subject = SecurityUtils.getSubject();
+//        生成用户的tocken
+        UsernamePasswordToken usernamePasswordToken = new UsernamePasswordToken(account, password);
+        try {
+            subject.login(usernamePasswordToken);
+        } catch (AuthenticationException e) {
+            return "{\"message\":\"账号或密码错误！\"}";
+        }
+        return "{\"message\":\"登录成功！\"}";
+    }
+
+//  执行登出操作
+    @PostMapping("/loginOut")
+    public Results loginOut() {
+//      获取主体
+        Subject subject = SecurityUtils.getSubject();
+//      清空shiro内部realm域的数据
+        subject.logout();
+        return new Results("用户的session数据清除成功！", CodeStatus.TWOHUNDRED.getCode(), null);
+    }
+```
+
+## Shiro springboot版
+
+### 1.导入依赖
+
+```xml
+<!-- shiro与Spring整合 -->
+<dependency>
+   <groupId>org.apache.shiro</groupId>
+   <artifactId>shiro-spring</artifactId>
+   <version>1.2.5</version>
+</dependency>
+```
+
+### 2.写realm域
+
+```java
+/**
+ * 创建shiro的Realm域，继承 AuthorizingRealm 抽象类，
+ * 实现doGetAuthorizationInfo授权，doGetAuthenticationInfo认证方法
+ */
+public class ShiroRealm extends AuthorizingRealm {
+    @Resource(name = "usersServiceimpl")
+    UsersServiceimpl usersServiceimpl;
+
+    @Override
+    protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principalCollection) {
+//        获取账号
+        String primaryPrincipal = (String) principalCollection.getPrimaryPrincipal();
+//        角色集合
+        ArrayList<String> role = new ArrayList<>();
+        role.add("admin");
+        role.add("kkk");
+        role.add("hhh");
+//        权限集合
+        ArrayList<String> competence = new ArrayList<>();
+        role.add("/FileOperatingController/fileSelect");
+        role.add("/FileOperatingController/fileUpload");
+        role.add("/FileOperatingController/download");
+//      创建要返回的 SimpleAuthorizationInfo 对象,并往对象内部传入，角色集合和权限集合
+        SimpleAuthorizationInfo simpleAuthorizationInfo = new SimpleAuthorizationInfo();
+//        往SimpleAuthorizationInfo对象中，传入角色集合
+        simpleAuthorizationInfo.addRoles(role);
+//        往SimpleAuthorizationInfo对象中，传入权限集合
+        simpleAuthorizationInfo.addStringPermissions(competence);
+        return simpleAuthorizationInfo;
+    }
+
+    /**
+     * 此方法是账号的认证方法，会抛出一下异常
+     * UnknownAccountException 没有此账号异常
+     * IncorrectCredentialsException 密码错误异常
+     * LockedAccountException 账号被锁定异常 ，等等。。。。
+     * <p>
+     * 注意：此方法返回 null 就会 抛出 UnknownAccountException 异常，
+     * 密码不用自己验证shiro会帮自己进行验证，直接把通过账号从数据库里查到的密码放到 S
+     * impleAuthenticationInfo 对象并返回即可
+     * </p>
+     */
+    @Override
+    protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken authenticationToken) throws AuthenticationException {
+//        获取账号
+        String principal = (String) authenticationToken.getPrincipal();
+//        通过账号查询用户
+        Users users = usersServiceimpl.loginServlet(principal);
+//        判断是否为空，为空返回null即可,shiro会自动抛出 UnknownAccountException 异常
+        if (users == null) {
+            return null;
+        }
+//        返回SimpleAuthenticationInfo对象，
+//        返回参数说明：
+//        参数1：要传给上方授权方法的账号
+//        参数2：shiro会帮自己进行 tocken 和自己返回的 数据库密码参数 进行比对，自己只需要传入从数据库查询到的密码即可
+//        参数3：当前缓存域的名字，直接 getName() 方法返回即可
+        return new SimpleAuthenticationInfo(users.getUaccount_number(), users.getUpassword(), getName());
+    }
+}
+```
+
+### 3.写配置文件
+
+```java
+@Configuration
+public class ShiroRealmConfig {
+    /**
+     * @Bean 作用：可以通过注解中的 name 属性，指定此配置bean的名字，改变此bean对象在spring容器中的 id 值
+     * @Qualifier 作用：可以通过注解中的默认属性，指定spring容器中传入指定的Bean，此注解只能在参数列表上使用此功能
+     */
+
+    @Bean
+    public ShiroFilterFactoryBean shiroFilterFactoryBean(@Qualifier("securityManager") SecurityManager securityManager) {
+//        创建shiro工厂bean并返回
+        ShiroFilterFactoryBean shiroFilterFactoryBean = new ShiroFilterFactoryBean();
+//        传入shiro安全管理器
+        shiroFilterFactoryBean.setSecurityManager(securityManager);
+//        登录认证跳转的路径
+        shiroFilterFactoryBean.setLoginUrl("/UsersController/loginSelect");
+//        权限认证失败跳转的路径
+        shiroFilterFactoryBean.setUnauthorizedUrl("/UsersController/errData");
+//      创建map集合，传入shiro拦截器的filter
+        HashMap<String, String> objectObjectHashMap = new HashMap<>();
+        /**
+         * anon:无需认证就可以访问                       语法：anon
+         * authc:必须认证了才能访问                      语法：authc
+         * user:必须拥有 我这个用户才能访问  此功能才能用   语法：user[指定用户]
+         * perms:拥有对某个资源权限才能访问               语法：perms[指定权限]
+         * roles:拥有某个角色权限才能访问                 语法：roles[指定角色]
+         * */
+//      设置要拦截的路径，并设置对此路径的具体操作
+        objectObjectHashMap.put("/**", "authc");
+        objectObjectHashMap.put("/FileOperatingController/*", "roles[ooo]");
+//      创建filter拦截器，传入map集合
+        shiroFilterFactoryBean.setFilterChainDefinitionMap(objectObjectHashMap);
+//        返回工厂shiro工厂bean
+        return shiroFilterFactoryBean;
+    }
+
+    //  创建shiro的SecurityMangaer的安全管理器
+    @Bean								// 自动装配shiroRealm域对象
+    public SecurityManager securityManager(@Qualifier("shiroRealm") ShiroRealm shiroRealm) {
+    //	创建shiro的安全管理器
+        DefaultWebSecurityManager defaultWebSecurityManager = new DefaultWebSecurityManager();
+    //	传入shiro域的对象
+        defaultWebSecurityManager.setRealm(shiroRealm);
+        return defaultWebSecurityManager;
+    }
+
+    //  创建 shiro的realm域的对象
+    @Bean
+    public ShiroRealm shiroRealm() {
+        return new ShiroRealm();
+    }
+```
+

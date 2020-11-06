@@ -1,0 +1,569 @@
+
+## 总结：
+
+1.配置环境：yum -y install zlib zlib-devel pcre pcre-devel gcc gcc-c++ openssl openssl-devel libevent libevent-devel perl unzip net-tools wget
+
+2.安装libfastcommon：wget https://github.com/happyfish100/libfastcommon/archive/V1.0.38.tar.gz
+
+3.安装fastdfs：wget https://github.com/happyfish100/fastdfs/archive/V5.11.tar.gz
+
+**storage节点的nginx：**
+
+4.安装fastdfs-nginx-module：wget https://github.com/happyfish100/fastdfs-nginx-module/archive/5e5f3566bbfa57418b5506aaefbe107a42c9fcb1.zip
+
+5.安装nginx：wget http://nginx.org/download/nginx-1.8.0.tar.gz
+
+**tracker跟踪器的nginx:**
+
+6.安装nginx：wget http://nginx.org/download/nginx-1.8.0.tar.gz
+
+
+
+4.配置文件:所有配置文件最后放置的位置都是 /etc/fdfs/ 下：
+
+**<1>storage节点的nginx需要的配置文件:位置**
+
+#安装包下的 fastdfs-5.11/conf 的配置文件
+
+-rw-r--r--. 1 root root   955 10月 16 09:48 http.conf
+-rw-r--r--. 1 root root 31172 10月 16 09:48 mime.types
+
+#fastdfs-nginx-model需要的配置文件
+
+-rw-r--r--. 1 root root  3732 10月 16 12:04 mod_fastdfs.conf
+
+**<2>fastdfs需要的配置文件**
+
+-rw-r--r--. 1 root root  1463 10月 16 10:09 client.conf  //客户端配置文件
+
+-rw-r--r--. 1 root root  1461 10月 15 15:53 client.conf.sample  /客户端配置文件样例
+
+-rw-r--r--. 1 root root  7927 10月 16 10:08 storage.conf   //storage配置文件
+
+-rw-r--r--. 1 root root  7927 10月 15 15:53 storage.conf.sample   //storage配置文件样例
+
+-rw-r--r--. 1 root root   105 10月 15 15:53 storage_ids.conf.sample //安装fstdfs自动就有暂不知道作用
+
+-rw-r--r--. 1 root root  7388 10月 16 10:07 tracker.conf  //tracker 配置文件
+
+-rw-r--r--. 1 root root  7389 10月 15 15:53 tracker.conf.sample  //tracker 配置文件样例
+
+
+
+
+
+
+
+############################################################################################
+
+学习网址：https://blog.csdn.net/wc1695040842/article/details/89766064
+
+docker run --name centosTest -p 22322:22122 -p 24000:23000 -it -d centos
+
+docker 所需要的环境较多，如下：执行一下命令即可
+
+yum -y install zlib zlib-devel pcre pcre-devel gcc gcc-c++ openssl openssl-devel libevent libevent-devel perl unzip net-tools wget
+
+```shell
+#!/bin/bash
+#安装gcc环境
+yum install gcc libevent libevent-devel -y &&
+#安装wget命令
+yum install -y wget &&
+
+#进入到root路径下
+cd /root/ &&
+#下载fastdfs所需要的依赖，使用wget命令获取libfastcommon压缩包
+wget https://github.com/happyfish100/libfastcommon/archive/V1.0.38.tar.gz &&
+#解压缩到root路径下
+tar -zxvf V1.0.38.tar.gz -C /root/ &&
+#进入libfastcommon文件夹  
+cd libfastcommon-1.0.38 &&
+#执行make.sh 进行编译
+./make.sh &&
+#执行make.sh 进行 安装
+./make.sh install &&
+
+#返回root路径下
+cd /root/ &&
+
+#下载fastdfs
+wget https://github.com/happyfish100/fastdfs/archive/V5.11.tar.gz &&
+#解压文件
+tar -zxvf V5.11.tar.gz &&
+#进入fastdfs解压包内
+cd fastdfs-5.11/ &&
+#编译fastdfs的make.sh文件
+./make.sh &&
+#执行并安装make.sh文件
+./make.sh install
+
+
+
+
+安装部分
+############################################################################################################
+配置部分
+
+
+
+
+#目录检查
+
+#1.服务脚本
+#/etc/init.d/fdfs_storaged
+#/etc/init.d/fdfs_trackerd
+
+#检查服务脚本命令
+find /etc/init.d/ -name "fdfs_*"
+
+
+#2.配置文件
+#/etc/fdfs/client.conf.sample
+#/etc/fdfs/storage.conf.sample
+#/etc/fdfs/tracker.conf.sample
+
+#检查配置文件命令
+find /etc/fdfs/ -name "*.conf.sample"
+
+#3.命令行工具
+#/usr/bin/fdfs_appender_test
+#/usr/bin/fdfs_appender_test1
+#/usr/bin/fdfs_append_file
+#/usr/bin/fdfs_crc32
+#/usr/bin/fdfs_delete_file
+#/usr/bin/fdfs_download_file
+#/usr/bin/fdfs_file_info
+#/usr/bin/fdfs_monitor
+#/usr/bin/fdfs_storaged
+#/usr/bin/fdfs_test
+#/usr/bin/fdfs_test1
+#/usr/bin/fdfs_trackerd
+#/usr/bin/fdfs_upload_appender
+#/usr/bin/fdfs_upload_file
+
+#检查命令行工具
+find /usr/bin/ -name "fdfs_*"
+
+
+#服务设置的命令路径是/usr/local/bin,时间安装路径是 /usr/bin,所以要修改的服务脚本的命令路径
+#vim /etc/init.d/fdfs_trackerd
+#使用查找替换命令进统一修改:%s+/usr/local/bin+/usr/bin
+#vim /etc/init.d/fdfs_storaged
+#使用查找替换命令进统一修改:%s+/usr/local/bin+/usr/bin
+
+
+############################################################################################################
+#复制tracker.conf.sample样例配置文件，并重命名
+cp /etc/fdfs/tracker.conf.sample /etc/fdfs/tracker.conf
+#修改tracker.conf配置文件
+
+# 修改的内容如下：
+disabled=false              # 启用配置文件
+port=22122                  # tracker服务器端口（默认22122）
+base_path=/fastdfs/tracker  # 存储日志和数据的根目录
+store_lookup=0              # 轮询方式上传
+
+#注意必须创建base_path的目录路径不然找不到对应的文件，导致上传失败！
+
+###########################################
+#复制/storage.conf.sample样例配置文件，并重命名
+cp /etc/fdfs/storage.conf.sample /etc/fdfs/storage.conf
+#修改storage.conf配置文件	
+
+# 修改的内容如下：
+disabled=false     # 启用配置文件
+port=23000                                         # storage的端口号,同一个组的 storage 端口号必须相同
+base_path=/data/fastdfs/storage       # 存储日志和数据的根目录
+store_path0=/data/fastdfs/storage     # 第一个存储目录
+store_path_count=1                    #存储路径个数，需要和store_path个数匹配
+tracker_server=192.168.0.121:22122    # tracker服务器的IP地址和端口
+tracker_server=192.168.0.122:22122    # 多个tracker直接添加多条配置
+
+#配置group_name
+#不同分组配置不同group_name，第一组为group1， 第二组为group2
+group_name=group1
+group_name=group2
+
+#注意修改storage的配置文件，必须 “创建” base_path的日志目录路径和store_path#的文件存储路径，不然找不到对应的文件，导致上传失败！
+
+#store_path0的配置同时也是stroage服务器存放文件的路径，即是数据路径，所以此路径必须配置！
+#store_path0解释：storage文件的存储路径，此路径可以配置多个path后面的数字随存储地址的增加而增加，
+#此参数的作用：例：当服务器内存不足时需要增加固态硬盘，由于固态硬盘和固态硬盘之间不互通所以需要指定硬盘的位置，即需要指定存储路径
+# 注意：store_path# 的参数路径由于不会自动创建，所以需要手动创建，即要自己先创建配置好对应的文件，防止上传失败！
+
+######################################################################
+#trackerd启动关闭
+
+#启动/etc/init.d/下的fdfs_trackerd文件
+/etc/init.d/fdfs_trackerd start 或 systemctl start fdfs_trackerd  都可以
+
+#检查trackerd是否启动成功
+ps aux | grep fdfs_trackerd
+
+#关闭/etc/init.d/下的fdfs_storaged文件
+/etc/init.d/fdfs_trackerd stop 或 systemctl stop fdfs_trackerd  都可以
+######################################################################
+#storage启动关闭
+
+#启动/etc/init.d/下的fdfs_storage文件
+/etc/init.d/fdfs_storage start 或 systemctl start fdfs_storage  都可以
+
+#检查trackerd是否启动成功
+ps aux | grep fdfs_storage
+
+#关闭/etc/init.d/下的fdfs_storage文件
+/etc/init.d/fdfs_storaged stop 或 systemctl stop fdfs_storaged  都可以
+######################################################################
+
+```
+
+1.gcc环境
+
+2.下载fastdfs的依赖包，libfastcommon 软件包    命令 wget https://github.com/happyfish100/libfastcommon/archive/V1.0.38.tar.gz
+
+​	进入解压包内
+
+​	编译make.sh  命令    ./make.sh   
+
+​	安装make.sh   命令    ./make.sh install
+
+3.下载fastdfs    命令   wget https://github.com/happyfish100/fastdfs/archive/V5.11.tar.gz
+
+
+
+###配置文件详解：
+
+##Tracker文件配置详解：
+
+disabled：配置文件是否生效
+
+bind_addr：绑定固定IP地址，服务器多个IP时希望指定IP提供服务时指定，不指定为服务器所有IP
+
+port：tracker服务端口
+
+connect_timeout：套接字连接超时秒数，默认30秒
+
+network_timeout：网络连接超时秒数，发送或接收数据时，超时后还不能发送或接收数据，则本次网络通信失败
+
+base_path：存储数据和日志文件的基础目录地址(根目录必须存在，子目录会自动创建),tracker server目录及文件结构：
+
+${base_path}
+
+|__data
+
+| |__storage_groups.dat：存储分组信息
+
+| |__storage_servers.dat：存储服务器列表
+
+| |__storage_sync_timestamp.dat：storage同步时间
+
+| |__storage_changelog.dat：storage变更日志
+
+| |__fdfs_trackerd.pid：tracker服务ID
+
+|__logs
+
+|__trackerd.log：tracker server日志文件
+
+max_connections：系统提供服务时的最大连接数
+
+accept_threads：线程总数
+
+work_threads：工作线程数，通常为CPU数，应该不大于max_connections
+
+store_lookup：选择哪个group存储上传的文件，0：轮询，1：指定组，2：负载均衡(最大剩余空间的group)
+
+store_group：存储上传文件的group名称，store_lookup为1时，必须指定一个group名称
+
+store_server：选择哪个storage进行上传操作，0：轮询(默认)，1：根据IP地址选择一个最小的，2：storage服务设置的upload_priority优先级来选择
+
+store_path：选择storage中的哪个目录进行上传，0：轮询，2：剩余空间最大的目录
+
+download_server：选择哪个storage作为下载文件服务，0：轮询，1：与上传文件服务一致
+
+reserved_storage_space：storage服务器为系统和其他应用保留的存储空间，支持百分比设置
+
+log_level：日志级别
+
+run_by_group：服务器运行FastDFS的用户组，不填为当前用户组
+
+run_by_user：服务器运行FastDFS的用户，不填为当前用户
+
+allow_hosts：可以连接此tracker服务的IP范围
+
+sync_log_buff_interval：同步或刷新日志信息导磁盘的时间间隔单位为秒
+
+check_active_interval：检测storage服务存活的时间间隔单位为秒，此参数应该大于storage服务配置的心跳时间间隔。
+
+thread_stack_size：线程栈的大小
+
+storage_ip_changed_auto_adjust：当storage服务的IP地址变更时是否自动调整
+
+storage_sync_file_max_delay：storage服务之间同步文件的最大延迟秒数，本参数不影响文件同步过程，仅在下载文件时，判断文件是否已经被同步完成的一个阀值
+
+storage_sync_file_max_time：存储服务器同步一个文件的最大秒数，本参数不影响文件同步过程，仅在下载文件时，判断文件是否已经被同步完成的一个阀值
+
+use_trunk_file：是否使用小文件合并存储特性
+
+slot_min_size：trunk文件分配的最小字节数
+
+slot_max_size：trunk文件分配的最大字节数，只有文件大小不大于这个参数值，才会合并存储。如果大于，将不采用合并存储方式
+
+trunk_file_size：合并存储的trunk文件的大小
+
+trunk_create_file_advance：是否提前创建trunk文件。此值为真，trunk_create_file_XXX的参数才有效
+
+trunk_create_file_time_base：提前创建trunck文件的起始时间点
+
+trunk_create_file_interval：创建trunck文件的时间间隔，单位为秒
+
+trunk_create_file_space_threshold：提前创建trunk文件需要达到的空闲trunk大小
+
+trunk_init_check_occupying：trunk初始化时，是否检查可用空间是否被占用
+
+trunk_init_reload_from_binlog：是否从trunk二进制日志中国年加载trunk可用空间信息
+
+trunk_compress_binlog_min_interval：trunk二进制日志压缩的最小时间间隔
+
+use_storage_id：是否使用storage ID作为storage服务标识
+
+storage_ids_filename：storage ID文件地址，use_storage_id为真，才需设置次参数。
+
+id_type_in_filename：storage ID文件中服务ID类型，支持IP和storage服务ID
+
+store_slave_file_use_link：存储从文件是否采用符号链接方式
+
+rotate_error_log：是否定期轮转错误日志
+
+error_log_rotate_time：错误日志轮转时间点
+
+rotate_error_log_size：错误日志按大小轮转
+
+log_file_keep_days：日志文件保留天数。0：不删除老日志文件
+
+use_connection_pool：使用连接池
+
+connection_pool_max_idle_time：连接池连接最大时长
+
+http.server_port：tracker服务的HTTP端口
+
+http.check_alive_interval：检查storage HTTP服务存活时间间隔，单位为秒
+
+http.check_alive_type：检查storage HTTP服务存活的服务协议类型
+
+http.check_alive_uri：检查storage HTTP服务存活地址URI／URL
+
+##Storage文件配置详解：
+
+disabled:配置文件是否生效
+
+group_name：storage服务所属group名称
+
+bind_addr：绑定指定IP地址提供服务
+
+client_bind：storage作为客户端连接其他服务时，是否绑定地址
+
+port：storage服务端口
+
+connect_timeout：套接字连接超时秒数，默认30秒
+
+network_timeout：网络连接超时秒数，发送或接收数据时，超时后还不能发送或接收数据，则本次网络通信失败
+
+heart_beat_interval：主动向tracker发送心跳间隔时间，单位为秒
+
+stat_report_interval：向tracker服务报告磁盘剩余空间时间间隔，单位为秒
+
+base_path：存储数据和日志文件的基础目录地址(根目录必须存在，子目录会自动创
+
+max_connections：系统提供服务时的最大连接数
+
+buff_size：接收或发送数据的队列结点缓存大小，工作队列消耗内存大小=send * max_connections
+
+accept_threads：线程总数
+
+work_threads：工作线程数，通常为CPU数，应该不大于max_connections
+
+disk_rw_separated：磁盘读写是否分离
+
+disk_reader_threads：读写分离时，系统中的写线程数=disk_reader_threads * store_path_count，读写混合时线程数=(disk_reader_threads + disk_writer_threads) * store_path_count
+
+disk_writer_threads：读写分离时，系统中的写线程数=disk_writer_threads * store_path_count
+
+sync_wait_msec：同步文件时，尝试从二进制日志文件中不断读取的休眠毫秒数
+
+sync_interval：同步完一个文件后继续同步的时间间隔，单位毫秒
+
+sync_start_time：同步开始时间点
+
+sync_end_time：同步结束时间点
+
+write_mark_file_freq：同步完N个文件后，同步storage的mark文件到磁盘
+
+store_path_count：storage服务存放文件的基路径数
+
+store_path#：逐一配置store_path路径，索引号从0开始，store_path0不配置的话，与base_path路径保持一致
+
+subdir_count_per_path：FastDFS存储文件的目录个数，会自动创建N * N个子目录
+
+tracker_server：tracker服务列表，每个一行。格式为主机和端口号，主机可以是主机名称或IP地址
+
+log_level：日志级别
+
+run_by_group：服务器运行FastDFS的用户组，不填为当前用户组
+
+run_by_user：服务器运行FastDFS的用户，不填为当前用户
+
+allow_hosts：允许连接storage服务的IP地址列表
+
+file_distribute_path_mode：文件在data目录下分布存储策略，0：轮询，1：随机根据文件名对应的hashcode存储
+
+file_distribute_rotate_count：file_distribute_path_mode为0时有效，当一个目录下的文件存放的文件数达到本参数值时，后续上传的文件存储到下一个目录
+
+fsync_after_written_bytes：写入大文件时，每N字节强行将内容同步到硬盘
+
+sync_log_buff_interval：同步或刷新日志信息导磁盘的时间间隔单位为秒
+
+sync_binlog_buff_interval：同步二进制日志到硬盘的时间间隔单位为秒
+
+sync_stat_file_interval：storage的stat信息同步到硬盘的时间间隔单位为秒
+
+thread_stack_size：线程栈的大小
+
+upload_priority：上传文件的优先级，值越小，优先级越高。tracker配置文件中的store_server值为2时生效
+
+if_alias_prefix：网络适配器的别名前缀，不填写会自动设置系统类型
+
+check_file_duplicate：是否上传的文件已经存在，配合FastDHT使用
+
+file_signature_method：重复文件内容的签名方式，支持hash和md5
+
+key_namespace：在FastDHT中保存文件索引的命名空间
+
+keep_alive：与FastDHT连接的方式。长连接和断连接
+
+use_access_log：是否将文件操作记录到操作日志
+
+rotate_access_log：是否定期轮询操作日志
+
+access_log_rotate_time：操作日志定期轮询时间点
+
+rotate_error_log：是否定期轮询错误日志
+
+error_log_rotate_time：错误日志定期轮询时间点
+
+rotate_access_log_size：按文件大小轮询操作日志
+
+rotate_error_log_size：按文件大小轮询错误日志
+
+log_file_keep_days：日志文件保存天数
+
+file_sync_skip_invalid_record：文件同步时，是否忽略无效的记录
+
+use_connection_pool：是否使用连接池
+
+connection_pool_max_idle_time：连接池连接最大时长
+
+http.domain_name：storage服务web服务域名，可以通过tracker服务重定向URL来访问，如果域名为空使用IP地址
+
+http.server_port：storage提供web服务的端口号
+
+
+
+
+
+## 安装fastdfs版stroage节点的nginx
+
+### 1.下载nginx 和 fastdfs-nginx-module 软件包
+
+**# cd 进 nginx 内部，安装客户端 ，给 nginx 安装 fastdfs-nginx-module 插件**
+
+```shell
+./configure --prefix=/root/nginx_fdfs_nginx --add-module=../../fastdfs-nginx-module/src/
+```
+
+命令解释：
+
+--prefix 命令是，指定安装nginx客户端的路径，当前只是一个解压包要执行make &&make install才算安装完成客户端
+
+--add-module命令是 fastdfs-nginx-module的src路径 
+
+../../ 两个点斜杠是跳出当前文件找到fastdfs-nginx-module文件
+
+命令意思总结：运行 configure 文件 安装客户端	并	安装module插件到fastdfs-nginx-module文件的src下
+
+
+
+**最后要在nginx的内部也就是做完上面一件事后直接，执行 make && make install**
+
+
+
+
+下面的步骤要按顺序来，先修改 mod_fastdfs.conf 配置文件，再修改nginx.conf
+
+
+
+
+### 2.对storage使用nginx需要三个配置文件，放在/etc/fdfs/下：
+
+三个配置文件的作用：http.conf提供http服务，mime.types 文件类型服务，mod_fastdfs.conf提供当组内的服务器没有完全同步完成，导致访问资源失败！自动寻找源服务器
+
+http.conf
+mime.types
+
+上面这两个文件从fastdfs的解压包内的conf/路径下复制到/etc/fdfs即可，不用修改
+
+mod_fastdfs.conf  //这个配置文件需要从	fastdfs-nginx-module	内的	src	路径下复制到/etc/fdfs
+
+复制成功后直接修改内容，源文件不要动，直接修改复制后的文件！
+
+修改内容：
+
+```shell
+#tracker服务器的IP地址和端口
+tracker_server=192.168.31.99:22122
+#storage服务器文件的存放地址
+store_path0=/home/fastdfs/storage
+#组名
+group_name=group1
+#是否使用组名，要改为true
+url_have_group_name = true
+
+
+
+[group1]
+group_name=group1
+storage_server_port=23000
+store_path_count=1
+store_path0=/home/fastdfs/storage
+
+[group2]
+group_name=group2
+storage_server_port=23000
+store_path_count=1
+store_path0=/home/fastdfs/storage
+```
+
+注意查看/etc/fdfs/下tracker,storage 两个配置文件的http.server_port的端口是否和nginx的端口一致，建议都使用80端口，不容易报错
+注意查看/etc/fdfs/下tracker,storage,mod_fastdfs 三个配置文件的store_path0是否一致，是否有此文件夹
+
+### 3.编辑 nginx 解压包内部的 conf 路径下的	nginx.conf	文件
+
+配置虚拟机，配置虚拟机的ip和端口，配置location 块的内容
+
+server {
+    linen       80;
+    server_name localhost;
+    #上方的端口 服务名不要动就行    
+    location /group1/M00 {
+	    ngx_fastdfs_module;
+    }        
+}
+
+**cd 进 nginx客户端,注意不是解压包，进入sbin下启动nginx**
+启动nginx 命令：./nginx 
+重启nginx 命令：./nginx -s reload
+关闭nginx 命令：./nginx -s stop
+
+**到此nginx-storage-fastdfs版结束！**
+

@@ -1,0 +1,26 @@
+工作区--->暂存区--->本地仓库--->远程仓库
+
+1.  git config --global user.name  "用户名"              设置此设备(终端)上git 的用户名
+2.  git config --global user.email  "邮箱"                   设置此设备(终端)上git的邮箱
+3.  git config --global --unset 配置名字                     删除某一个全局配置项
+4.  git config --global --edit 配置名字                         修改某一个全局配置项
+5.  git init 	初始化本地的git仓库，此文件夹被git完全托管
+6.  git status    查看文件的状态
+7.  git add 文件名    把文件添加的暂存区 （git rm -rf 文件名） 可以把暂停区状态给清空
+8.  git commit -m “描述提交的文件”    把文件提交到本地的git仓库，后面不加描述的文字就不用加   -m 的命令
+9.  git log -p  查看具体细节的提交日志
+10. git remote add origin https://gitee.com/rain-ky/Test001.git   连接远程仓库，并将此链接取别名为 origin
+11. git remote 查看全部路径变量
+12. git push origin master  将文件从本地仓库推送到gitee上，origin(上方定义的远程仓库)，master(远程仓库的默认分支，即推送的位置【主分支】)
+13. git clone 仓库路径   从仓库复制(克隆)文件
+14. git pull origin master 从仓库路径为(origin)上，的master分支拉取文件，更新本地仓库的文件
+15. git pull origin master --no-edit 从远程仓库拉取文件，--no-edit 此命令，指定拉取后不提示编写信息
+16. git reflog   本地操作的命令日志
+17. git reset 版本id    根据版本id进行版本回退
+18. git push origin master -f 版本回退后，远程仓库进行版本回退
+19. git remote set-url 新的路径      修改remote 仓库路径变量
+20. git push origin 本地分支名:远程分支名    指定本地分支推送到指定远程分支。
+21. git remote show (remote分支名) 展示指定的remote的分支信息
+22. mv 文件名 修改文件名，此命令需要把修改过的文件名给添加的暂存区再进行提交
+23. git mv 文件名 修改文件的名字，此命令不需要把文件添加的暂存区，直接进行git commit 命令提交即可
+24. 注意 : git 搭建本地git服务器功能，请参考   git daemon 命令的使用

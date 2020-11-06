@@ -1,0 +1,150 @@
+学习网址：https://blog.csdn.net/xhaimail/article/details/79886478
+
+Spring文件中的引用的xsd文件是用于校验xml文件的格式用的。
+
+**Spring是如何校验XML的：**
+Spring默认在启动时是要加载XSD文件来验证xml文件的，所以如果有的时候断网了，或者一些开源软件切换域名，那么就很容易碰到应用启动不了。为了防止这种情况，Spring提供了一种机制，默认从本地加载XSD文件。
+
+例如：可以打开spring-context-4.3.0.RELEASE.jar，进入org/springframework/context/config/目录，可以看到下面有
+spring-context-xxx.xsd
+spring-context-xxx.xsd
+spring-context-xxx.xsd
+spring-context-xxx.xsd
+......
+
+**Spring中的xsd文件带版本号与不带版本号的区别：**
+不带版本号，它会自动使用JAR中最新的xsd；这样以后升级Spring版本的时候，你的配置文件不用再手动改动。Spring的配置里,最好不要配置xsd文件的版本号。
+
+另外如果没有配置版本号，取的就是当前jar里的XSD文件，减少了各种风险。其实，最大的好处是，当你升级了Spring的jar，该配置文件的XSD声明部分也不用改，会自动找到最新的本地jar里的XSD声明。Spring做了特殊处理，保证断网的情况下不写XSD版本号，能找到本地的jar文件。
+
+
+
+**完整的**
+
+```xml
+<beans xmlns="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context" 
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop" 
+	xmlns:mvc="http://www.springframework.org/schema/mvc" 
+　　 xmlns:task="http://www.springframework.org/schema/task"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+	   http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd
+	   http://www.springframework.org/schema/aop
+	   http://www.springframework.org/schema/aop/spring-aop.xsd
+	   http://www.springframework.org/schema/mvc
+	   http://www.springframework.org/schema/mvc/spring-mvc.xsd
+	   http://www.springframework.org/schema/tx
+	   http://www.springframework.org/schema/tx/spring-tx.xsd
+	   http://www.springframework.org/schema/task
+	   http://www.springframework.org/schema/task/spring-task.xsd">
+</beans>
+```
+
+
+
+**MVC**
+
+```xml
+<beans xmlns="http://www.springframework.org/schema/beans" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:mvc="http://www.springframework.org/schema/mvc" 
+xsi:schemaLocation="http://www.springframework.org/schema/beans
+	   http://www.springframework.org/schema/beans/spring-beans.xsd
+	   http://www.springframework.org/schema/mvc
+	   http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+</beans>
+```
+
+
+
+**AOP**
+
+```xml
+<beans xmlns="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop" 
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	   http://www.springframework.org/schema/beans/spring-beans.xsd
+	   http://www.springframework.org/schema/aop
+	   http://www.springframework.org/schema/aop/spring-aop.xsd">
+</beans>
+```
+
+
+
+**TX**
+
+```xml
+<beans xmlns="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	   http://www.springframework.org/schema/beans/spring-beans.xsd
+	   http://www.springframework.org/schema/tx
+	   http://www.springframework.org/schema/tx/spring-tx.xsd">
+</beans>
+```
+
+**TASK**
+
+```xml
+<beans xmlns="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+　　xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	   http://www.springframework.org/schema/beans/spring-beans.xsd
+	   http://www.springframework.org/schema/task
+	   http://www.springframework.org/schema/task/spring-task.xsd">
+</beans>
+```
+
+
+
+**如果用到的其它配置信息可以引用**
+
+```xml
+<beans xmlns="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context" 
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	   http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd">
+</beans>
+```
+
+
+
+
+
+### **例：**
+
+如果在启动项目时报：
+
+```html
+org.xml.sax.SAXParseException; lineNumber: 11; columnNumber: 76; 元素 "context:property-placeholder" 的前缀 "context" 未绑定。
+```
+
+追溯到配置文件中，如果是
+
+```html
+<context:property-placeholder location="classpath:config/db.properties" />
+```
+
+引起的，那么要bean头部加入以下信息即可：
+
+```xml
+xmlns:context="http://www.springframework.org/schema/context" 
+xsi:schemaLocation="http://www.springframework.org/schema/beans
+   http://www.springframework.org/schema/beans/spring-beans.xsd
+   http://www.springframework.org/schema/context
+   http://www.springframework.org/schema/context/spring-context.xsd
+
+   ......
+
+   ">
+```

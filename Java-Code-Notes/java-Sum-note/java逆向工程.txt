@@ -1,0 +1,289 @@
+***注意：要导入关于逆向工程的jar包***
+
+#### <1>java代码写法：
+
+​           import org.mybatis.generator.api.MyBatisGenerator;
+
+​           import org.mybatis.generator.config.xml.ConfigurationParser;
+
+​           import org.mybatis.generator.internal.DefaultShellCallback;
+
+ 
+
+​           import java.io.File;
+
+​           import java.util.ArrayList;
+
+​           import java.util.List;
+
+ 
+
+​           public class GeneratorSqlmap {
+
+ 
+
+​              public static void main(String[] args) throws Exception {
+
+​                  List<String> warnings = new ArrayList<String>();
+
+​                  boolean overwrite = true;
+
+​                  File configFile = new File("src/generator.xml");
+
+​                  ConfigurationParser cp = new ConfigurationParser(warnings);
+
+​                  org.mybatis.generator.config.Configuration config = cp.parseConfiguration(configFile);
+
+​                  DefaultShellCallback callback = new DefaultShellCallback(overwrite);
+
+​                  MyBatisGenerator myBatisGenerator = new MyBatisGenerator(config, callback, warnings);
+
+​                  myBatisGenerator.generate(null);
+
+ 
+
+​              }
+
+ 
+
+​           }
+
+​           
+
+####         <2>generator.xml文件写法：
+
+​           
+
+​              <?xml version="1.0" encoding="UTF-8"?>
+
+​           <!DOCTYPE generatorConfiguration
+
+​            PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN"
+
+​            "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+
+​           <generatorConfiguration>
+
+​              <context id="testTables" targetRuntime="MyBatis3">
+
+​                  <commentGenerator>
+
+​                     <!-- 是否去除自动生成的注释 true：是 ： false:否 -->
+
+​                     <property name="suppressAllComments" value="true" />
+
+​                  </commentGenerator>
+
+​                  <!--数据库连接的信息：驱动类、连接地址、用户名、密码 -->
+
+​                  <jdbcConnection driverClass="com.mysql.jdbc.Driver"
+
+​                     connectionURL="jdbc:mysql://localhost:3306/video" userId="root"
+
+​                     password="123456">
+
+​                  </jdbcConnection>
+
+​                  <!-- <jdbcConnection driverClass="oracle.jdbc.OracleDriver"
+
+​                     connectionURL="jdbc:oracle:thin:@127.0.0.1:1521:yycg"
+
+​                     userId="yycg"
+
+​                     password="yycg">
+
+​                  </jdbcConnection> -->
+
+ 
+
+​                  <!-- 默认false，把JDBC DECIMAL 和 NUMERIC 类型解析为 Integer，为 true时把JDBC DECIMAL 和 
+
+​                     NUMERIC 类型解析为java.math.BigDecimal -->
+
+​                  <javaTypeResolver>
+
+​                     <property name="forceBigDecimals" value="false" />
+
+​                  </javaTypeResolver>
+
+ 
+
+​                  <!-- targetProject:生成MODEL类的位置 -->
+
+​                  <javaModelGenerator targetPackage="com.zhiyou100.model"
+
+​                     targetProject=".\src">
+
+​                     <!-- enableSubPackages:是否让schema作为包的后缀 -->
+
+​                     <property name="enableSubPackages" value="false" />
+
+​                     <!-- 从数据库返回的值被清理前后的空格 -->
+
+​                     <property name="trimStrings" value="true" />
+
+​                  </javaModelGenerator>
+
+​                  <!-- targetProject:mapper映射文件生成的位置 -->
+
+​                  <sqlMapGenerator targetPackage="com.zhiyou100.mapper" 
+
+​                     targetProject=".\src">
+
+​                     <!-- enableSubPackages:是否让schema作为包的后缀 -->
+
+​                     <property name="enableSubPackages" value="false" />
+
+​                  </sqlMapGenerator>
+
+​                  <!-- targetPackage：mapper接口生成的位置 -->
+
+​                  <javaClientGenerator type="XMLMAPPER"
+
+​                     targetPackage="com.zhiyou100.mapper"
+
+​                     targetProject=".\src">
+
+​                     <!-- enableSubPackages:是否让schema作为包的后缀 -->
+
+​                     <property name="enableSubPackages" value="false" />
+
+​                  </javaClientGenerator>
+
+​                  <!-- 指定数据库表 ==>这样会为每个表多生成一个xxxExample类-->
+
+​                  <!-- <table tableName="items"></table>
+
+                                   <table tableName="orders"></table>
+
+                                   <table tableName="orderdetail"></table>
+
+                                   <table tableName="user"></table> -->
+
+​                  <!-- 指定数据库表 ==>这样就不会为每个表多生成一个xxxExample类-->
+
+                                   <table tableName="video" 
+
+​                  enableCountByExample="false"
+
+​                  enableUpdateByExample="false"
+
+​                  enableDeleteByExample="false"
+
+​                  enableSelectByExample="false"
+
+​                  selectByExampleQueryId="false"></table>
+
+                                   <table tableName="course" 
+
+​                  enableCountByExample="false"
+
+​                  enableUpdateByExample="false"
+
+​                  enableDeleteByExample="false"
+
+​                  enableSelectByExample="false"
+
+​                  selectByExampleQueryId="false"></table>
+
+                                          <table tableName="permission" 
+
+​                  enableCountByExample="false"
+
+​                  enableUpdateByExample="false"
+
+​                  enableDeleteByExample="false"
+
+​                  enableSelectByExample="false"
+
+​                  selectByExampleQueryId="false"></table>
+
+                                          <table tableName="role" 
+
+​                  enableCountByExample="false"
+
+​                  enableUpdateByExample="false"
+
+​                  enableDeleteByExample="false"
+
+​                  enableSelectByExample="false"
+
+​                  selectByExampleQueryId="false"></table>
+
+                                   <table tableName="role_permission" 
+
+​                  enableCountByExample="false"
+
+​                  enableUpdateByExample="false"
+
+​                  enableDeleteByExample="false"
+
+​                  enableSelectByExample="false"
+
+​                  selectByExampleQueryId="false"></table>
+
+                                   <table tableName="speaker" 
+
+​                  enableCountByExample="false"
+
+​                  enableUpdateByExample="false"
+
+​                  enableDeleteByExample="false"
+
+​                  enableSelectByExample="false"
+
+​                  selectByExampleQueryId="false"></table>
+
+                                   <table tableName="subject" 
+
+​                  enableCountByExample="false"
+
+​                  enableUpdateByExample="false"
+
+​                  enableDeleteByExample="false"
+
+​                  enableSelectByExample="false"
+
+​                  selectByExampleQueryId="false"></table>
+
+                                   <table tableName="user" 
+
+​                  enableCountByExample="false"
+
+​                  enableUpdateByExample="false"
+
+​                  enableDeleteByExample="false"
+
+​                  enableSelectByExample="false"
+
+​                  selectByExampleQueryId="false"></table>
+
+                                   <table tableName="user_role" 
+
+​                  enableCountByExample="false"
+
+​                  enableUpdateByExample="false"
+
+​                  enableDeleteByExample="false"
+
+​                  enableSelectByExample="false"
+
+​                  selectByExampleQueryId="false"></table>
+
+​                  
+
+                                          <table tableName="log" 
+
+​                  enableCountByExample="false"
+
+​                  enableUpdateByExample="false"
+
+​                  enableDeleteByExample="false"
+
+​                  enableSelectByExample="false"
+
+​                  selectByExampleQueryId="false"></table>
+
+​              </context>
+
+​           </generatorConfiguration>

@@ -1,0 +1,290 @@
+**RibbonMQ**：是一个消息队列类型的数据库 **作用是**：微服务之间的通信
+
+
+
+注意：消息队列数据库中的数据被取走之后，数据库就没有了，就像字节流一样
+
+
+
+
+
+概念：一个队列只能让一个微服务使用
+
+1.交换器：Exchange : 作用：把一条消息分裂成多份
+
+
+
+
+
+重要提示：要捋清楚，Exchange   ， Bangdings  ,    Queues	三者之间的关系 ！
+
+## 1.导入依赖
+
+```xml
+<!--RibbonMQ的依赖-->
+<dependency>
+   <groupId>org.springframework.boot</groupId>
+   <artifactId>spring-boot-starter-amqp</artifactId>
+</dependency>
+```
+
+## 2.直接模式
+
+**默认的交换机不用再配置，默认自动绑定默认的交换机**
+
+### 1.创建队列
+
+解释：创建队列，类似在数据库中创建表的操作
+
+​			**一个队列只能被多个消费者访问，默认是轮询访问**
+
+```java
+@Configuration
+public class MqConfig {
+// 队列数据库中有此队列，则不会创建，没有此队列，则会随着项目的启动，操作队列数据库，进行创建
+    @Bean
+    public Queue getQueue() {
+        // 队列名
+        return new Queue("directtest");
+    }
+
+}
+```
+
+### 2.修改配置文件
+
+此配置，不管是生产者，还是消费者都需要配置，生产者可以是消费者，消费者也可以是生产者
+
+```properties
+# 指定微服务的端口
+server.port=8090
+# 指定ribbonMQ的数据库的ip
+spring.rabbitmq.host=192.168.87.128
+```
+
+### 3.消息生产者
+
+```java
+ @Autowired
+ private RabbitTemplate rabbitTemplate; //调用RabbitTemplate 对象，对数据库中的队列进行操作
+
+ public void testProvider() {
+        /**
+         * routingKey  路由key,也就是消息队列的名字 
+         * object  具体的消息
+         */
+	System.out.println("生产者 : 发送消息");
+     //                              队列名      要发送的消息
+    rabbitTemplate.convertAndSend("directtest","直接模式测试");
+}
+
+```
+
+### 4.消息消费者
+
+方式一：@RabbitListener 放在类上 和  @RabbitHandler组合使用
+
+注解解释：
+
+@RabbitListener 可以标注在类上面，需配合 @RabbitHandler 注解一起使用
+
+@RabbitListener 标注在类上面表示当有收到消息的时候，就交给 @RabbitHandler 的方法处理，具体使用哪个方法处理，根据 MessageConverter 转换后的参数类型
+
+```java
+@Component  //此类被 spring容器 托管
+@RabbitListener(queues = "directtest") //指定监听并消费哪个队列的消息
+public class MsgCuttomer {
+
+    @RabbitHandler //消费的方法
+    public void receiveMsg(String msg) {
+        System.out.println("directtest : 消费者接收消息 "+msg);
+    }
+
+}
+```
+
+方式二：@RabbitListener 放在方法上，单个方法进行使用
+
+```java
+@Component //此类被 spring容器 托管
+public class MessageHandler {
+
+    @RabbitListener(queues = "zhihao.miao.order") //指定监听并消费哪个队列的消息,并让当前方法进行消费
+    public void handleMessage(byte[] message){
+        System.out.println("消费消息");
+        System.out.println(new String(message));
+    }
+}
+```
+
+## 2.分裂模式
+
+**指定交换机进行分裂，绑定多个队列，把一条消息分裂成多个一摸一样的多份，并分发到多个队列**
+
+### 1.创建多个队列
+
+**让交换器绑定多个队列**
+
+```java
+@Configuration
+public class MqConfig {
+	//创建队列
+    @Bean
+    public Queue getQueue1() {
+        // 队列名
+        return new Queue("directtest1");
+    }
+    
+    @Bean
+    public Queue getQueue2() {
+        // 队列名
+        return new Queue("directtest2");
+    }
+    
+    
+    
+    
+    
+    
+    //创建交换机
+    @Bean
+	public FanoutExchange getFanoutExchange() {
+    	// 交换机名字
+    	return new FanoutExchange("myFanoutExchange");
+	}
+    
+    
+    
+    
+    
+    
+    
+    //交换机绑定队列，一次只能绑定一个队列，所以要创建多个bean进行多次绑定
+    @Bean
+	public Binding bingding1(@Qualifier("getQueue1") Queue q1,FanoutExchange fanoutExchange){
+        //q1 队列绑定到 fanoutExchange交换机上
+    	return BindingBuilder.bind(q1).to(fanoutExchange);
+	}
+    
+	@Bean
+	public Binding bingding2(@Qualifier("getQueue2") Queue q2,FanoutExchange fanoutExchange){
+    	return BindingBuilder.bind(q2).to(fanoutExchange);
+	}
+
+
+    
+
+}
+```
+
+### 2.生产者
+
+```java
+ @Autowired
+ private RabbitTemplate rabbitTemplate; //调用RabbitTemplate 对象，对数据库中的队列进行操作
+
+ public void testProvider() {
+        /**
+         * routingKey  路由key,也就是消息队列的名字 
+         * object  具体的消息
+         */
+	System.out.println("生产者 : 发送消息");
+     //                              	队列名   路由key不用写  要发送的消息
+    rabbitTemplate.convertAndSend("myFanoutExchange","","分列模式测试 ");
+}
+```
+
+
+
+### 3.消费者
+
+和上方的直接模式一样
+
+## 3.主题模式
+
+和分裂模式一样一个交换机，绑定多个队列，但每个队列还要绑定一个 路由key
+
+生产者，发送消息，并同时给消息绑定一个 路由key，交换机，根据生产者消息上的路由key，对自己进行绑定的队列上的路由key，进行模板匹配，匹配成功则将消息发送到此队列
+
+主题模式：匹配成功，多个队列，消息会进行分裂，并把消息分发给匹配成功的多个队列
+
+### 1.修改配置类
+
+```java
+@Configuration
+public class MqConfig {
+	//创建队列
+    @Bean
+    public Queue getQueue1() {
+        // 队列名
+        return new Queue("directtest1");
+    }
+    
+    @Bean
+    public Queue getQueue2() {
+        // 队列名
+        return new Queue("directtest2");
+    }
+    
+    
+    
+    
+    
+    
+    //创建交换机
+    @Bean
+	public FanoutExchange getFanoutExchange() {
+    	// 交换机名字
+    	return new FanoutExchange("myFanoutExchange");
+	}
+    
+    
+    
+    
+    
+    
+    
+    //交换机绑定队列，一次只能绑定一个队列，所以要创建多个bean进行多次绑定
+    @Bean
+	public Binding bingding1(@Qualifier("getQueue1") Queue q1,FanoutExchange fanoutExchange){
+        //q1 队列绑定到 fanoutExchange交换机上					with()方法，让此队列绑定一个，routing(路由) key
+    	return BindingBuilder.bind(q1).to(fanoutExchange).with("#.log");
+	}
+    
+	@Bean
+	public Binding bingding2(@Qualifier("getQueue2") Queue q2,FanoutExchange fanoutExchange){
+    	return BindingBuilder.bind(q2).to(fanoutExchange).with("ui.#");
+	}
+    
+	@Bean
+	public Binding bingding3(@Qualifier("getQueue3") Queue q3,FanoutExchange fanoutExchange){
+    	return BindingBuilder.bind(q2).to(fanoutExchange).with("#.hi.#");
+	}
+
+    
+
+}
+```
+
+### 2.生产者
+
+```java
+ @Autowired
+ private RabbitTemplate rabbitTemplate; //调用RabbitTemplate 对象，对数据库中的队列进行操作
+
+ public void testProvider() {
+        /**
+         * routingKey  路由key,也就是消息队列的名字 
+         * object  具体的消息
+         */
+	System.out.println("生产者 : 发送消息");
+     //                        队列名      此消息绑定的routing(路由) key    要发送的消息
+    rabbitTemplate.convertAndSend("directtest","#.log","直接模式测试");
+}
+```
+
+### 3.消费者
+
+和上方的一样
+
+**主题模式总结：消息绑定key,交换机对 消息上的key，对 交换机自身绑定的队列上的key , 进行匹配**

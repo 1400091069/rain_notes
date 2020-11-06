@@ -1,0 +1,1653 @@
+docker可视化图形管理工具：dockerui  此工具可通过linux上已经安装的docker搜索镜像进行安装 , 默认端口 9000
+**注意**：dockerui安装时要绑定卷 -v /var/run/docker.sock:/var/run/docker.sock
+
+
+**docker 容器启动失败，解决办法：运行 docker logs [容器ID/容器名]  查看容器日志，查看报错，并向百度上搜索出错的问题解决办法**
+
+##总结docker常用命令：
+
+#登录本地docker
+#语法：docker login -u [docker hub 用户名] -p [docker hub 密码]
+#查看登录状态：cat /root/.docker/config.json
+#登出：docker logout
+
+systemctl start docker	//启动docker
+
+systemctl restart  docker	//重启docker
+
+systemctl stop docker	//关闭docker
+
+
+
+docker search 某个XXX镜像名字  # 搜索
+
+docker pull 某个XXX镜像名字   #下载某个镜像
+docker rmi 某个XXX镜像名字/ID   # 删除某个镜像,默认删除latest
+docker images       # 列出本地主机上的镜像
+
+
+
+重点：docker run [options] images #option代表 -name,-p,-d...相关的命令，images 代表运行此容器使用的镜像名
+**重点**：docker update [要追加的命令] //用于docker run 命令后命令没有设置完全追加更新命令
+友情提示：-p 可以映射多个端口，-v 可以绑定容器外的多个文件只需写多个 -p 
+         -v 把本地文件或文件夹和容器内的文件进行绑定，实时同步文件内容
+         -i 即使没有连接，也要保持标准输入保持打开状态，一般与 -t 连用
+         -t 分配一个伪tty(终端)，一般与 -i 连用
+         注意 -it 一般启动容器时要使用不然会导致容器启动直接关闭
+
+**容器自启动**：
+ restart policy ：在使用docker run启动容器时通过--restart标志指定，这个标志有多个value可选，不同的value有不同的行为，如下表所列：
+
+docker ps		//查看正在运行的容器
+docker ps -n 10	//-n后面跟的数字代表最近创建的10个容器,数字是几,就展现最近创建的几个容器
+docker ps -a 	//查看创建的所有容器的状态 ，status 字段下的内容是容器的状态
+docker ps -s	//展现文件的大小
+docker stats 容器名 //查看容器运行使用的 cpu , 内存 ，io 等信息
+注意：在不限制容器cpu,内存的情况下，容器运行时对cpu,内存，io的使用没有限制 
+
+docker inspect 容器名/容器ID //查看容器的参数的详细信息
+
+
+
+docker exec -it [容器名/容器id] /bin/bash	//进入容器
+docker exec 容器名 容器内命令 //可以在容器外部执行容器内部的命令 
+
+
+
+exit	//退出容器
+快捷键ctrl+d可以直接退出容器
+
+docker stop 容器名或容器id	//停止容器方式一
+docker kill 容器名或容器id	//停止容器方式二
+docker start [容器ID/容器名]	//启动容器
+docker rm [容器名/容器ID]	//删除容器
+docker -v [容器名/容器ID]    //查看容器版本号
+docker cp 容器外的文件路径 [容器ID/容器名]:容器内的文件路径  //把本地文件复制到容器内指定的文件路径
+docker cp [容器ID/容器名]:容器内的路径 容器外的文件路径   //把容器内的文件复制到容器外指定的文件路径
+
+docker commit -m=“提交的描述信息” -a=“作者” 容器ID [要创建的目标镜像名/也是docker hub的(用户名/仓库名)]:[版本标签名] 
+//commit提交容器副本使之成为一个新的镜像，标签名即版本号
+
+docker save -o [文件名] [要保存的镜像名] //保存镜像到本地，文件名的后缀必须是.tar格式
+docker load -i [文件名] //加载本地保存的镜像，加载的文件后缀必须是.tar格式
+
+docker logs 容器ID/容器名     //查看容器的日志
+docker logs -f 容器ID/容器名  //实时查看容器的日志
+
+**删除/var/lib/docker/containers/容器ID/容器ID-json.log 路径下的日志文件即删除所有容器日志**
+**cat /dev/null > /var/lib/docker/containers/容器id/容器id-json.log //容器日志清除(治标)**
+**注意**：删除日志时：绝对不能删掉/var/lib/docker/containers 下的容器id文件夹，此类文件夹代表你运行的容器，删除后代表运行的容器也就没了，
+所以只需要删除此类文件夹内部的日志文件即可，切记小心操作！
+
+容器意外补充命令：
+
+docker exec -it redis redis-cli //此命令用于进入redis容器的内部命令行执行数据的操作
+
+
+脚本命令补充：
+
+**1.docker 容器日志清除脚本:**
+
+```json
+#!/bin/sh
+
+echo "======== docker containers logs file size ========"  
+
+logs=$(find /var/lib/docker/containers/ -name *-json.log)  
+
+for log in $logs  
+        do  
+             ls -lh $log   
+        done  
+```
+
+
+###################################################################################################
+
+
+## 1.docker常用命令:
+
+systemctl start docker	//启动docker
+systemctl restart  docker	//重启docker
+
+docker search 某个XXX镜像名字  # 搜索
+
+docker pull 某个XXX镜像名字   #下载某个镜像
+docker rmi 某个XXX镜像名字/ID   # 删除某个镜像,默认删除latest
+docker images       # 列出本地主机上的镜像
+
+
+docker run 命令的语法：docker run [OPTIONS] IMAGE
+
+OPTIONS说明：
+
+-a stdin: 指定标准输入输出内容类型，可选 STDIN/STDOUT/STDERR 三项；
+
+-d: 后台运行容器，并返回容器ID；
+
+-i: 以交互模式运行容器，通常与 -t 同时使用；
+
+-P: 随机端口映射，容器内部端口随机映射到主机的端口
+
+-p: 指定端口映射，格式为：主机(宿主)端口:容器端口
+
+-t: 为容器重新分配一个伪输入终端，通常与 -i 同时使用；
+
+--name="nginx-lb": 为容器指定一个名称；
+
+--dns 8.8.8.8: 指定容器使用的DNS服务器，默认和宿主一致；
+
+--dns-search example.com: 指定容器DNS搜索域名，默认和宿主一致；
+
+-h "mars": 指定容器的hostname；
+
+-e username="ritchie": 设置环境变量；
+
+--env-file=[]: 从指定文件读入环境变量；
+
+--cpuset="0-2" or --cpuset="0,1,2": 绑定容器到指定CPU运行；
+
+-m :设置容器使用内存最大值；
+
+--net="bridge": 指定容器的网络连接类型，支持 bridge/host/none/container: 四种类型；
+
+--link=[]: 添加链接到另一个容器；
+
+--expose=[]: 开放一个端口或一组端口；
+
+--volume , -v: 绑定一个卷
+
+
+docker run 命令示例：运行mysql 镜像
+docker run  [OPTIONS] mysql 解释：从--name 到 -d 都是[OPTIONS]的内容，只有最后的MySQL是镜像名
+docker run --name mysql -e MYSQL_ROOT_PASSWORD=123456 -p 3306:3306 -d mysql
+
+•	–name：给新创建的容器命名，此处命名为mysql
+•	-e：配置信息，此处配置mysql的root用户的登陆密码
+•	-p：端口映射，此处映射主机3306端口到容器mysql的3306端口 ；前面的3306是映射后的，后面的是mysql默认的
+•	-d：容器在后台运行, 成功启动容器后输出容器的完整ID
+•	最后一个mysql指的是mysql镜像名字
+
+docker ps		//查看正在运行的容器
+docker ps -n 10	//-n后面跟的数字代表最近创建的10个容器,数字是几,就展现最近创建的几个容器
+docker ps -a 	//展现正在运行的容器
+docker ps -s	//展现文件的大小
+  -a, --all             Show all containers (default shows just running)
+  -f, --filter filter   Filter output based on conditions provided
+      --format string   Pretty-print containers using a Go template
+  -n, --last int        Show n last created containers (includes all states) (default -1)
+  -l, --latest          Show the latest created container (includes all states)
+      --no-trunc        Don't truncate output
+  -q, --quiet           Only display numeric IDs
+  -s, --size            Display total file sizes
+
+-a，——all显示所有容器(默认显示正在运行)
+滤波器滤波器输出基于条件提供
+——使用Go模板格式化字符串的漂亮打印容器
+-n，——最后一个int类型显示最后创建的n个容器(包括所有状态)(默认值-1)
+-l，——最新显示最新创建的容器(包括所有状态)
+——不要截断输出
+-q，——只显示数字id
+-s,显示总文件大小
+
+docker exec -it 容器名 /bin/bash	//进入容器
+exit	//退出容器
+docker stop 容器名或容器id	//停止容器方式一
+docker kill 容器名或容器id	//停止容器方式二
+docker start 容器ID或容器名	//启动容器
+docker rm 容器名	//删除容器
+
+
+
+## 2.安装docker:
+
+1.需要gcc环境 :
+yum -y install gcc
+yum -y install gcc-c++
+2.卸载旧的docker :
+$ sudo apt-get remove docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-selinux \
+                  docker-engine-selinux \
+                  docker-engine
+3.安装必要的软件包 :
+sudo apt-get install -y yum-utils \
+  device-mapper-persistent-data \
+  lvm2
+4.设置stable镜像仓库 :
+设置stable镜像仓库(注意：我们这里使用国内的镜像地址【因为Docker 官网给出的地址在国外，太慢了！】)
+
+yum-config-manager --add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+
+5.更新yum软件包索引 :
+yum makecache fast
+6.安装Docke ce :
+yum -y install docker-ce
+7.启动docker :
+systemctl start docker  	启动docker服务
+systemctl stop docker	关闭docker服务
+	
+service docker start		启动
+service docker stop   	停止
+service docker restart  	重启
+
+启动命令解释:
+
+第一个代表的centos7.x的命令
+第二个代表的centos6.x的命令
+docker官网下载
+
+docker启动   :    
+systemctl start docker
+service docker start
+
+重启docker服务 :
+systemctl restart  docker
+sudo service docker restart
+
+关闭docker :
+systemctl stop docker
+service docker stop
+
+查看是否启动成功 :
+docker ps -a
+
+8.运行docker自带的hello-world程序:
+docker run hello-world
+
+
+
+
+[ 安装完成 ! ]
+
+
+
+
+
+## 3.Docker [常用命令] :
+
+docker version
+
+docker info
+
+docker --help
+
+docker images       # 列出本地主机上的镜像
+	参数-a :列出本地所有的镜像（含中间映像层） docker images –a
+	-q :只显示镜像ID。
+--no-trunc :显示完整的镜像信息
+--digests :显示镜像的摘要信息
+
+docker search 某个XXX镜像名字  # 搜索
+
+docker pull 某个XXX镜像名字   #下载某个镜像
+
+docker rmi 某个XXX镜像名字/ID   # 删除某个镜像,默认删除latest
+	docker rmi tomcat:v1.0      # 删除tag为1.0的tomcat镜像
+	docker rmi -f tomcat:v1.0      # 强制删除tag为1.0的tomcat镜像
+	docker rmi -f tomcat:v1.0 tomcat:v2.0 #强制删tag为1.0,2.0的两个tomcat镜像 空格隔开
+
+docker run [options] imagesName    # 新建并启动容器
+		--name="容器新名字": 为容器指定一个名称；
+-d: 后台运行容器，并返回容器ID，也即启动守护式容器；
+-i：以交互模式运行容器，通常与 -t 同时使用；
+-t：为容器重新分配一个伪输入终端，通常与 -i 同时使用；
+-P: 随机端口映射；
+-p: 指定端口映射，有以下四种格式
+-e: 配置信息
+ip:hostPort:containerPort
+ip::containerPort...
+
+docker ps [options]  #正在运行哪些docker容器
+		-a :列出当前所有正在运行的容器+历史上运行过的
+-l :显示最近创建的容器。
+-n：显示最近n个创建的容器。
+-q :静默模式，只显示容器编号。
+--no-trunc :不截断输出。
+docker rm `docker ps -a -q`     #  批量删除全部容器,符号是~处的`
+
+exit    # 退出容器
+ctrl+P+Q   # 容器退出不停止
+docker start 容器ID或者容器名     # 重启容器
+docker restart 容器ID或者容器名   # 重启容器
+docker stop 容器ID或者容器名      # 停止容器
+docker kill 容器ID或者容器名      # 强制停止容器
+
+docker rm 容器ID    # 删除已停止的容器
+docker logs -f -t --tail 容器ID    # 查看容器日志
+			* -t 是加入时间戳
+* -f 跟随最新的日志打印
+* --tail 数字 显示最后多少条
+docker top 容器ID  # 查看容器内运行的进程
+docker exec -it 容器ID /bin/bash     # 进入正在运行的容器并以命令行交互
+
+docker attach 容器ID            # 进入正在运行的容器并以命令行交互
+
+​	上述两个区别:
+​			attach 直接进入容器启动命令的终端，不会启动新的进程
+
+exec 是在容器中打开新的终端，并且可以启动新的进程
+
+docker cp 容器ID:容器内路径 目的主机路径   # 从容器内拷贝文件到主机上
+
+docker inspect 镜像名   # 描述镜像
+
+## 4.下载镜像:
+
+docker search 某个XXX镜像名字  # 搜索
+
+docker pull 某个XXX镜像名字   #下载某个镜像 
+
+docker pull 某个XXX镜像名字  :5.7 #下载某个镜像,冒号后面是要下载的版本号,不跟版本号默认下载最新的版本 latest
+
+## 5.运行镜像生产容器:
+
+docker run --name mysql -e MYSQL_ROOT_PASSWORD=123456 -p 3306:3306 -d mysql
+
+•	–name：给新创建的容器命名，此处命名为mysql
+•	-e：配置信息，此处配置mysql的root用户的登陆密码
+•	-p：端口映射，此处映射主机3306端口到容器mysql的3306端口 ；前面的3306是映射后的，后面的是mysql默认的
+•	-d：容器在后台运行, 成功启动容器后输出容器的完整ID
+•	最后一个mysql指的是mysql镜像名字
+
+## 6.进入容器 :
+
+docker exec -it 容器名 /bin/bash
+
+mysql -uroot -p123456 //登录MySQL容器
+
+## 7.退出容器:
+
+​     exit
+
+## 8.停止容器 :
+
+停止容器有2种方式：
+1、docker stop 容器名或容器id
+2、docker kill 容器名或容器id
+15.启动容器 :
+docker start 容器ID或容器名
+16.删除容器 :
+docker rm 容器名
+
+17.镜像commit : 提交容器生成新的镜像 : 
+是什么 ?
+docker commit提交容器副本使之成为一个新的镜像
+为什么 ?
+比如:我们新从仓库pull拉下来的mysql,我们做过修改之后(添加了数据),重新将这一个新的mysql变为一个镜像
+怎么做?
+命令:
+docker commit -m=“提交的描述信息” -a=“作者” 容器ID 要创建的目标镜像名:[标签名]
+18.[远程连接mysql数据库,要修改的命令] :
+1,容器中登录mysql,查看mysql的版本
+mysql> status;
+--------------
+mysql  Ver 8.0.11 for Linux on x86_64 (MySQL Community Server - GPL)
+
+2,进行授权远程连接(注意mysql 8.0跟之前的授权方式不同)授权
+
+GRANT ALL ON *.* TO 'root'@'%';
+
+3.刷新权限 : flush privileges;
+此时,还不能远程访问,因为Navicat只支持旧版本的加密,需要更改mysql的加密规则
+4.更改加密规则 :
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'password' PASSWORD EXPIRE NEVER;
+5.更新root用户密码 : 
+ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY '123456';
+6.刷新权限 :
+flush privileges;
+7.重新启动MySQL容器即可 ! 
+
+
+
+			mongodb	:	docker安装方法:
+docker pull mongo:3.6
+docker run -di --name=mongo -p 27017:27017 mongo:3.6
+
+			redis	:	docker安装方法:
+docker pull redis:5.0.5
+docker run -p 6379:6379 -v /c/docker.image.data/redis/data:/data  -d redis:5.0.5 redis-server --appendonly yes
+
+进入redis 控制台
+docker exec -it 2498a3301c34 redis-cli
+进入后可执行redis的数据命令
+
+			FastDFS	:	docker安装方法:
+
+docker pull morunchang/fastdfs
+docker run -d --name tracker --net=host morunchang/fastdfs sh tracker.sh
+
+
+1.参考网站: https://blog.csdn.net/wo541075754/article/details/89607318
+docker pull season/fastdfs
+2.目录配置:
+在宿主机中新建目录用,于存放fastdfs配置文件和数据。名称根据自己需求，如下只是样例，fastdfs在一台服务器支持多个store_path，每个store_path指向一个存储路径。
+mkdir /usr/local/fastdfs/etc/ 
+mkdir /usr/local/fastdfs/data/storage_data
+mkdir /usr/local/fastdfs/data/store_path
+mkdir /usr/local/fastdfs/data/tracker_data
+创建的配置的文件的作用:
+etc：配置文件地址
+storage_data：存储数据地址
+tracker_data：存储数据地址
+store_path：扩容
+				ES	:	docker安装方法:
+1.安装es
+docker pull elasticsearch:5.6.8
+docker run -di --name=es -p 9200:9200 -p 9300:9300 elasticsearch
+
+2.安装IK分词器
+/usr/share/elasticsearch# elasticsearch-plugin install https://github.com/medcl/elasticsearch-analysis-ik/releases/download/v5.6.8/elasticsearch-analysis-ik-5.6.8.zip
+
+3.安装head :解释:ES的可视化插件	http://192.168.43.105:9100/ 		此路径可访问
+docker pull mobz/elasticsearch-head:5
+docker run -di --name head -p 9100:9100 mobz/elasticsearch-head:5
+
+4.安装nodejs 解释:可视化插件需要
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 新版docker安装：
+
+安装链接网址：https://zhuanlan.zhihu.com/p/54147784
+
+# 史上最全（全平台）docker安装方法！
+
+[![浪子](https://pic4.zhimg.com/v2-1372570093d8ed0f12ce2b64d6198055_xs.jpg)](https://www.zhihu.com/people/scriptwang)
+
+[浪子](https://www.zhihu.com/people/scriptwang)
+
+不是归人 是个浪子
+
+48 人赞同了该文章
+
+知乎排版太乱，欢迎阅读原文
+
+[http://1024.services/archives/20190105.html1024.services](https://link.zhihu.com/?target=http%3A//1024.services/archives/20190105.html)
+
+2017年2月8日，docker更新到1.13.1（[更新日志](https://link.zhihu.com/?target=https%3A//docs.docker.com/release-notes/docker-engine/)），此后又分为了[docker CE](https://link.zhihu.com/?target=https%3A//docs.docker.com/engine/release-notes/)（社区版）和[docker EE](https://link.zhihu.com/?target=https%3A//docs.docker.com/engine/release-notes/)（商业版）。
+
+此处只分享docker CE安装方法，商业版多了容器资源监控和镜像扫描的功能，普通用户用不到。
+
+如果是你是**懒人**，在服务器版本直接执行官方出品的一键安装脚本（脚本会区分不同的操作系统且脚本会安装体验版**（edge版）**而不是稳定版（stable版）且最好不要用于**生产环境**，脚本Github[地址](https://link.zhihu.com/?target=https%3A//github.com/docker/docker-install)）。
+
+```text
+$ sudo wget -qO- https://get.docker.com/ | bash
+
+$ # 如果上面的不行，执行下面两句
+$ curl -fsSL https://get.docker.com -o get-docker.sh
+$ sudo sh get-docker.sh
+
+$ # 安装成功执行下面语句，如果有类似回显，说明安装成功
+$ docker --version
+Docker version 18.06.1-ce, build e68fc7a
+```
+
+如果想了解更多内容以及桌面版本如何安装，请看下文！
+
+坐稳了，系好安全带，发车！
+
+
+
+![img](https://pic4.zhimg.com/80/v2-ec116449a588c84211b8e8fea8776c94_720w.jpg)
+
+
+
+## CentOS版docker一键安装脚本
+
+由于在CentOS下安装docker本人最常用，所以将命令写成一键安装脚本，默认安装**最新稳定版**，将以下内容保存成`dockerIntall.sh`并执行`sh dockerIntall.sh`
+
+- 非国内版，比如国外VPS（**网络畅通**）
+
+```text
+#!/bin/bash
+# remove old version
+sudo yum remove docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-selinux \
+                  docker-engine-selinux \
+                  docker-engine
+
+# remove all docker data 
+sudo rm -rf /var/lib/docker
+
+#  preinstall utils 
+sudo yum install -y yum-utils \
+  device-mapper-persistent-data \
+  lvm2
+
+# add repository
+sudo yum-config-manager \
+    --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo
+
+# make cache
+sudo yum makecache fast
+
+# install the latest stable version of docker
+sudo yum install -y docker-ce
+
+# start deamon and enable auto start when power on
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# add current user 
+sudo groupadd docker
+sudo gpasswd -a ${USER} docker
+sudo systemctl restart docker
+```
+
+- 国内版，需要设置**网络加速**，国内和docker官网网络不通
+
+```text
+#!/bin/bash
+# 移除掉旧的版本
+sudo yum remove docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-selinux \
+                  docker-engine-selinux \
+                  docker-engine
+
+# 删除所有旧的数据
+sudo rm -rf /var/lib/docker
+
+#  安装依赖包
+sudo yum install -y yum-utils \
+  device-mapper-persistent-data \
+  lvm2
+
+# 添加源，使用了阿里云镜像
+sudo yum-config-manager \
+    --add-repo \
+    http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+
+# 配置缓存
+sudo yum makecache fast
+
+# 安装最新稳定版本的docker
+sudo yum install -y docker-ce
+
+# 配置镜像加速器
+sudo mkdir -p /etc/docker
+sudo tee /etc/docker/daemon.json <<-'EOF'
+{
+  "registry-mirrors": ["http://hub-mirror.c.163.com"]
+}
+EOF
+
+# 启动docker引擎并设置开机启动
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# 配置当前用户对docker的执行权限
+sudo groupadd docker
+sudo gpasswd -a ${USER} docker
+sudo systemctl restart docker
+```
+
+**注意**：国内访问docker太慢，一般会配置加速器，此处配置的加速器是163的加速器：`http://hub-mirror.c.163.com`，也可以配置[阿里云的加速器](https://link.zhihu.com/?target=https%3A//blog.csdn.net/kozazyh/article/details/79511723)。
+
+## 支持的平台
+
+![img](https://pic2.zhimg.com/80/v2-338b6d9ee68b5a0c8c89a8b57e0cc66f_720w.jpg)
+
+## CentOS安装docker
+
+CentOS 是RedHat Linux社区版本，其特点是**相当稳定**，非常适合作为服务器使用，一般没有特殊要求，我都会优先选用此Linux发行版。
+
+## 系统要求
+
+- 安装docker CE需要**CentOS 7**的维护版本，存档版本（没在维护的版本）不支持
+- 必须开启`centos-extras`仓库，默认是打开的，如果被关闭了，需要[重新打开](https://link.zhihu.com/?target=https%3A//wiki.centos.org/AdditionalResources/Repositories)
+- 推荐使用`overlay2`存储驱动，`overlay`也可以但是不推荐。`overlay2`要求Linux内核为`4.0+`
+
+## 卸载旧版本
+
+旧版本的docker叫做`docker`或者`docker-engine` ，如果有安装，先卸载其以及其依赖，新版本的docker叫做`docker-ce`。
+`/var/lib/docker/`目录下的镜像文件，容器，卷和网络将会被保留，不会被删除。
+
+```text
+$ sudo yum remove docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-selinux \
+                  docker-engine-selinux \
+                  docker-engine
+```
+
+## 安装
+
+有三种安装办法：
+
+- 在软件源内添加docker，并且安装，这样安装和升级比较方便，官方推荐。
+- 下载RPM包手动安装，手动升级，一般在与互联网隔绝的情况下使用此方法。
+- 官方一键安装脚本，上面说过，此处不再赘述。
+
+## 添加源进行安装
+
+首先安装docker的仓库，你可以从这个仓库中安装或者升级docker。
+
+**设置仓库**
+
+1. 安装依赖包，`yum-utils`提供`yum-config-manager`工具，`devicemapper`存储驱动需要`device-mapper-persistent-data`和`lvm2`
+
+```text
+$ sudo yum install -y yum-utils \
+  device-mapper-persistent-data \
+  lvm2
+```
+
+1. 使用下面的命令安装稳定版仓库，即使安装最新体验版或者是测试版也需要稳定版仓库。
+
+```text
+$ sudo yum-config-manager \
+    --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo
+```
+
+1. **可选**：体验版和测试版默认是关闭的，你可以通过下面的命令打开，不打开也不影响稳定版的使用。
+
+```text
+$ # 打开体验版与测试版
+$ sudo yum-config-manager --enable docker-ce-edge
+$ sudo yum-config-manager --enable docker-ce-test
+
+$ # 关闭体验版与测试版
+$ sudo yum-config-manager --disable docker-ce-edge
+$ sudo yum-config-manager --disable docker-ce-test
+```
+
+注意：从docker17.06开始，稳定版也同样会被推送到体验版和测试版的仓库里
+
+**安装docker CE**
+
+1. 安装最新版本的docker CE
+
+```text
+$ sudo yum install -y docker-ce
+```
+
+以上命令始终安装docker CE最新版本，如果提示接受GPG key，官方说检查指纹是否是
+`060A 61C5 1B55 8A7F 742B 77AA C52F EB6B 621E 9F35`，是的话，就接受，不过我在安装的过程中没有遇见。
+**注意**：如果安装了多个docker仓库，使用`yum install`或者`yum update`命令时后面不跟版本信息的话，将始终安装最高版本的docker！
+
+1. 安装指定版本的docker CE
+   列出版本，版本号从高到低
+
+```text
+$ yum list docker-ce --showduplicates | sort -r
+docker-ce.x86_64            18.03.1.ce-1.el7.centos             docker-ce-stable
+docker-ce.x86_64            18.03.0.ce-1.el7.centos             docker-ce-stable
+docker-ce.x86_64            17.12.1.ce-1.el7.centos             docker-ce-stable
+docker-ce.x86_64            17.12.0.ce-1.el7.centos             docker-ce-stable
+docker-ce.x86_64            17.09.1.ce-1.el7.centos             docker-ce-stable
+docker-ce.x86_64            17.09.0.ce-1.el7.centos             docker-ce-stable
+docker-ce.x86_64            17.06.2.ce-1.el7.centos             docker-ce-stable
+docker-ce.x86_64            17.06.1.ce-1.el7.centos             docker-ce-stable
+docker-ce.x86_64            17.06.0.ce-1.el7.centos             docker-ce-stable
+docker-ce.x86_64            17.03.3.ce-1.el7                    docker-ce-stable
+docker-ce.x86_64            17.03.2.ce-1.el7.centos             docker-ce-stable
+docker-ce.x86_64            17.03.1.ce-1.el7.centos             docker-ce-stable
+docker-ce.x86_64            17.03.0.ce-1.el7.centos             docker-ce-stable
+```
+
+安装指定版本的docker CE，需要指定完整的包名称，例如安装仓库中的这个版本 `18.03.0.ce-1.el7.centos` ，其命令为
+
+```text
+$ sudo yum install -y docker-ce-18.03.0.ce
+```
+
+其他版本同理
+**启动docker CE**
+启动其实是启动docker deamon，即docker守护进程/docker引擎
+
+```text
+$ sudo systemctl start docker
+```
+
+以上即是CentOS从仓库中安装docker CE的全部过程，如果需要升级的话，移除之前的docker，再重复上面的过程即可。
+
+## 从RPM包安装
+
+RPM包在没有网络的时候就特别管用了，找一台有网络的电脑下载RPM包，这个官方地址列出了所有CentOS版本的docker，选择一个进行下载。
+`https://download.docker.com/linux/centos/7/x86_64/stable/Packages/`
+比如我下载的文件叫做（**在当前目录**）
+`docker-ce-18.09.0-3.el7.x86_64.rpm`
+执行
+
+```text
+$ sudo yum install -y docker-ce-18.09.0-3.el7.x86_64.rpm
+```
+
+启动守护进程
+
+```text
+$ sudo systemctl start docker
+```
+
+## 卸载
+
+移除docker
+
+```text
+$ sudo yum remove docker-ce
+```
+
+移除镜像，容器，卷，网络，自定义文件等
+
+```text
+$ sudo rm -rf /var/lib/docker
+```
+
+## Ubuntu安装docker
+
+Ubuntu是国内乃至全球热门的Linux发行版。也是各种推荐入门Linux爱好者安装的一个Linux发行版。
+
+## 系统要求
+
+需要64bit的以下任何Ubuntu版本：
+
+- Bionic 18.04 (LTS)
+- Xenial 16.04 (LTS)
+- Trusty 14.04 (LTS)
+
+1. CE支持`x86_64, armhf, s390x (IBM Z), and ppc64le (IBM Power)`架构的Ubuntu
+
+**注意**：`ppc64le`和`s390x`架构下，只支持`Xenial`以上的Ubuntu
+
+## 卸载旧版本
+
+旧版本的docker叫做`docker`或者`docker-engine` ，如果有安装，先卸载其以及其依赖，新版本的docker叫做`docker-ce`。
+`/var/lib/docker/`目录下的镜像文件，容器，卷和网络将会被保留，不会被删除。
+
+```text
+$ sudo apt-get remove docker docker-engine docker.io containerd runc
+```
+
+## 支持的存储驱动
+
+Ubuntu上的docker CE支持`overlay2` 和`aufs`存储驱动
+
+- Linux 4.X内核极其以上才支持overlay2，并且overlay2表现的比aufs好
+- Linux 3.X内核不支持overlay或overlay2，但是支持aufs
+
+**除非有特殊理由要用aufs没否则不建议**，如果要使用aufs，需要额外的准备工作：
+
+- Trusty 14.04：
+
+```text
+$ # 安装linux-image-extra-*包，让docker支持aufs
+$ sudo apt-get update
+
+$ sudo apt-get install \
+    linux-image-extra-$(uname -r) \
+    linux-image-extra-virtual
+```
+
+## 安装
+
+有三种安装办法：
+
+- 在软件源内添加docker，并且安装，这样安装和升级比较方便，推荐这种方法。
+- 下载DEB包手动安装，手动升级，一般在与互联网隔绝的情况下使用此方法。
+- 官方一键安装脚本，上面说过，此处不再赘述。
+
+## 添加源进行安装
+
+首先安装docker的仓库，你可以从这个仓库中安装或者升级docker。
+
+**设置仓库**
+
+1. 升级apt包索引
+
+```text
+$ sudo apt-get update
+```
+
+1. 安装能够让apt使用HTTPS的包
+
+```text
+$ sudo apt-get install \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    software-properties-common
+```
+
+1. 添加官方的GPG key
+
+```text
+$ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+```
+
+查看现在是否拥有了指纹`9DC8 5822 9FC7 DD38 854A E2D8 8D81 803C 0EBF CD88`的密匙，执行下面搜索命令，如果有类似回显说明拥有此密匙。
+
+```text
+$ sudo apt-key fingerprint 0EBFCD88
+pub   4096R/0EBFCD88 2017-02-22
+      Key fingerprint = 9DC8 5822 9FC7 DD38 854A  E2D8 8D81 803C 0EBF CD88
+uid                  Docker Release (CE deb) <docker@docker.com>
+sub   4096R/F273FCD8 2017-02-22
+```
+
+1. 设置稳定版源
+   必须安装稳定版源，即使安装体验版或者测试版也需要稳定版源，不同架构的机器需要不同安装命令，`lsb_release -cs`命令会返回是哪种Debian发行版，比如`xenial`，如果想安装体验版（edge）或者测试版（test），将命令中的stable换成相应的字符串即可。
+
+```text
+$ # x86_64 / amd64架构
+$ sudo add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+
+
+$ # armhf架构
+$ sudo add-apt-repository \
+   "deb [arch=armhf] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+
+
+$ #  arm64架构
+$ sudo add-apt-repository \
+   "deb [arch=arm64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+
+
+$ #  IBM Power (ppc64le)
+$ sudo add-apt-repository \
+   "deb [arch=ppc64el] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+
+
+$ #  IBM Z (s390x)
+$ sudo add-apt-repository \
+   "deb [arch=s390x] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+```
+
+注意：从docker17.06开始，稳定版也同样会被推送到体验版和测试版的仓库里
+
+**安装docker CE**
+
+1. 升级apt包索引
+
+```text
+$ sudo apt-get update
+```
+
+1. 安装最新版本的docker CE
+
+```text
+$ sudo apt-get install docker-ce
+```
+
+**注意**：如果安装了多个docker仓库，使用`apt-get install`或者`apt-get update`命令时后面不跟版本信息的话，将始终安装最高版本的docker！
+
+1. 安装指定版本的docker CE
+   列出版本，版本号从高到低
+
+```text
+$ apt-cache madison docker-ce
+docker-ce | 18.09.0~ce-0~ubuntu | https://download.docker.com/linux/ubuntu xenial/stable amd64 Packages
+```
+
+安装指定版本的docker CE，需要指定完整的包名称，例如安装仓库中的这个版本 `18.09.0~ce-0~ubuntu` ，其命令为
+
+```text
+$ sudo apt-get install docker-ce=18.03.0~ce-0~ubuntu
+```
+
+其他版本同理
+**docker deamon，即docker守护进程/docker引擎，在安装完成后会自动启动**
+如果需要升级的话，首先执行`sudo apt-get update`，再重复上面的过程即可。
+
+## 从DEB包安装
+
+DEB包在没有网络的时候就特别管用了，找一台有网络的电脑下载DEB包，这个官方地址列出了所有Debian版本的docker，选择一个进行下载。
+`https://download.docker.com/linux/ubuntu/dists/`
+在浏览器打开上述地址，导航至`pool/stable/`，根据自己的架构`amd64, armhf, ppc64el, or s390x`下载`.deb`文件
+比如我下载的文件叫做（**在当前目录**）
+`docker-ce_18.06.1_ce_3-0_ubuntu_amd64.deb`
+执行
+
+```text
+$ sudo dpkg -i docker-ce_18.06.1_ce_3-0_ubuntu_amd64.deb
+```
+
+**docker deamon，即docker守护进程/docker引擎，在安装完成后会自动启动**
+
+## 卸载
+
+移除docker
+
+```text
+$ sudo apt-get purge docker-ce
+```
+
+移除镜像，容器，卷，网络，自定义文件等
+
+```text
+$ sudo rm -rf /var/lib/docker
+```
+
+## Debian安装docker
+
+Debian是完全免费的，最符合开源精神的Linux发行版，默认不包含任何专有驱动，软件大多数都是稳定版本而不是最新版本，其开发维护完全是由社区驱动。
+
+## 系统要求
+
+需要64bit的以下任何Debian或Raspbian版本
+
+- Buster 10 (Docker CE 17.11 Edge only)
+- Stretch 9 (stable) / Raspbian Stretch
+- Jessie 8 (LTS) / Raspbian Jessie
+- Wheezy 7.7 (LTS)
+
+## 卸载旧版本
+
+旧版本的docker叫做`docker`或者`docker-engine` ，如果有安装，先卸载其以及其依赖，新版本的docker叫做`docker-ce`。
+`/var/lib/docker/`目录下的镜像文件，容器，卷和网络将会被保留，不会被删除。
+
+```text
+$ sudo apt-get remove docker docker-engine docker.io containerd runc
+```
+
+如果是Wheezy 7.7则需要Linux内核版本至少为3.10，查看内核版本，并且需要打开`backports`仓库
+
+```text
+$ uname -r
+```
+
+## 安装
+
+有三种安装办法：
+
+- 在软件源内添加docker，并且安装，这样安装和升级比较方便，**除了Raspbian**外推荐这种方法。
+- 下载DEB包手动安装，手动升级，一般在与互联网隔绝的情况下使用此方法。
+- 官方一键安装脚本，**Raspbian用户只能通过此法安装**，上面说过，此处不再赘述。
+
+## 添加源进行安装
+
+首先安装docker的仓库，你可以从这个仓库中安装或者升级docker。
+
+**设置仓库**
+
+1. 升级apt包索引
+
+```text
+$ sudo apt-get update
+```
+
+1. 安装能够让apt使用HTTPS的包
+
+```text
+$ # Jessie或者更新的版本执行下面命令
+$ sudo apt-get install \
+     apt-transport-https \
+     ca-certificates \
+     curl \
+     gnupg2 \
+     software-properties-common
+
+$ # Wheezy或者更旧的版本执行下面命令
+$ sudo apt-get install \
+     apt-transport-https \
+     ca-certificates \
+     curl \
+     python-software-properties
+```
+
+1. 添加官方的GPG key
+
+```text
+$ curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+```
+
+查看现在是否拥有了指纹`9DC8 5822 9FC7 DD38 854A E2D8 8D81 803C 0EBF CD88`的密匙，执行下面搜索命令，如果有类似回显说明拥有此密匙。
+
+```text
+$ sudo apt-key fingerprint 0EBFCD88
+pub   4096R/0EBFCD88 2017-02-22
+      Key fingerprint = 9DC8 5822 9FC7 DD38 854A  E2D8 8D81 803C 0EBF CD88
+uid                  Docker Release (CE deb) <docker@docker.com>
+sub   4096R/F273FCD8 2017-02-22
+```
+
+1. 设置稳定版源
+   必须安装稳定版源，即使安装体验版或者测试版也需要稳定版源，不同架构的机器需要不同安装命令，`lsb_release -cs`命令会返回是哪种Debian发行版，比如`jessie`，如果想安装体验版（edge）或者测试版（test），将命令中的stable换成相应的字符串即可。
+
+```text
+$ # x86_64 / amd64架构
+$ sudo add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/debian \
+   $(lsb_release -cs) \
+   stable"
+
+
+$ # armhf架构
+$ echo "deb [arch=armhf] https://download.docker.com/linux/debian \
+     $(lsb_release -cs) stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list
+
+
+$ #  arm64架构
+$ echo "deb [arch=arm64] https://download.docker.com/linux/debian \
+     $(lsb_release -cs) stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list
+```
+
+1. 如果发行版是Wheezy：Wheezy上的add-apt-repository版本添加了一个不存在的deb-src库，编辑/etc/apt/sources.list，注释或移除类似下面的语句
+
+```text
+deb-src [arch=amd64] https://download.docker.com/linux/debian wheezy stable
+```
+
+注意：从docker17.06开始，稳定版也同样会被推送到体验版和测试版的仓库里
+
+**安装docker CE**
+注意：以下安装过程只支持`Debian x86_64 / amd64`，`Debian ARM`或 `Raspbian`。
+
+1. 升级apt包索引
+
+```text
+$ sudo apt-get update
+```
+
+1. 安装最新版本的docker CE
+
+```text
+$ sudo apt-get install docker-ce
+```
+
+**注意**：如果安装了多个docker仓库，使用`apt-get install`或者`apt-get update`命令时后面不跟版本信息的话，将始终安装最高版本的docker！
+
+1. 安装指定版本的docker CE
+   列出版本，版本号从高到低
+
+```text
+$ apt-cache madison docker-ce
+docker-ce | 18.09.0~ce-0~debian | https://download.docker.com/linux/debian jessie/stable amd64 Packages
+```
+
+安装指定版本的docker CE，需要指定完整的包名称，例如安装仓库中的这个版本 `18.03.0.ce-1.el7.centos` ，其命令为
+
+```text
+$ sudo apt-get install docker-ce-18.03.0.ce
+```
+
+其他版本同理
+**docker deamon，即docker守护进程/docker引擎，在安装完成后会自动启动**
+如果需要升级的话，首先执行`sudo apt-get update`，再重复上面的过程即可。
+
+## 从DEB包安装
+
+DEB包在没有网络的时候就特别管用了，找一台有网络的电脑下载DEB包，这个官方地址列出了所有Debian版本的docker，选择一个进行下载。
+`https://download.docker.com/linux/debian/dists/`
+在浏览器打开上述地址，导航至`pool/stable/`，根据自己的架构`amd64, armhf, or arm64`下载`.deb`文件
+比如我下载的文件叫做（**在当前目录**）
+`docker-ce_17.06.2_ce-0_debian_amd64.deb`
+执行
+
+```text
+$ sudo dpkg -i docker-ce_17.06.2_ce-0_debian_amd64.deb
+```
+
+**docker deamon，即docker守护进程/docker引擎，在安装完成后会自动启动**
+
+## 卸载
+
+移除docker
+
+```text
+$ sudo apt-get purge docker-ce
+```
+
+移除镜像，容器，卷，网络，自定义文件等
+
+```text
+$ sudo rm -rf /var/lib/docker
+```
+
+## Fedora安装docker
+
+经常和Ubuntu比较的发行版，和Ubuntu最大的不同可能就是包管理不一样。
+
+## 系统要求
+
+需要64bit的以下任何Fedora版本
+
+- 26
+- 27
+- 28
+
+## 卸载旧版本
+
+旧版本的docker叫做`docker`或者`docker-engine` ，如果有安装，先卸载其以及其依赖，新版本的docker叫做`docker-ce`。
+`/var/lib/docker/`目录下的镜像文件，容器，卷和网络将会被保留，不会被删除。
+
+```text
+$ sudo dnf remove docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-selinux \
+                  docker-engine-selinux \
+                  docker-engine
+```
+
+## 安装
+
+有三种安装办法：
+
+- 在软件源内添加docker，并且安装，这样安装和升级比较方便，这是推荐的方法。
+- 下载RPM包手动安装，手动升级，一般在与互联网隔绝的情况下使用此方法。
+- 官方一键安装脚本，上面说过，此处不再赘述。
+
+## 添加源进行安装
+
+首先安装docker的仓库，你可以从这个仓库中安装或者升级docker。
+
+**设置仓库**
+
+1. 安装 `dnf-plugins-core`，它提供了从命令行管理DNF源的工具。
+
+```text
+$ sudo dnf -y install dnf-plugins-core
+```
+
+1. 使用下面的命令安装稳定版仓库，即使安装最新体验版或者是测试版也需要稳定版仓库。
+
+```text
+$ sudo dnf config-manager \
+    --add-repo \
+    https://download.docker.com/linux/fedora/docker-ce.repo
+```
+
+1. **可选**：体验版和测试版默认是关闭的，你可以通过下面的命令打开，不打开也不影响稳定版的使用。
+
+```text
+$ # 打开体验版与测试版
+$ sudo dnf config-manager --set-enabled docker-ce-edge
+$ sudo dnf config-manager --set-enabled docker-ce-test
+
+$ # 关闭体验版与测试版
+$ sudo dnf config-manager --set-disabled docker-ce-edge
+$ sudo dnf config-manager --set-disabled docker-ce-test
+```
+
+注意：从docker17.06开始，稳定版也同样会被推送到体验版和测试版的仓库里
+
+**安装docker CE**
+
+1. 安装最新版本的docker CE
+
+```text
+$ sudo dnf install docker-ce
+```
+
+以上命令始终安装docker CE最新版本，如果提示接受GPG key，官方说检查指纹是否是
+`060A 61C5 1B55 8A7F 742B 77AA C52F EB6B 621E 9F35`，是的话，就接受，不过我在安装的过程中没有遇见。
+**注意**：如果安装了多个docker仓库，使用`dnf install`或者`dnf update`命令时后面不跟版本信息的话，将始终安装最高版本的docker！
+
+1. 安装指定版本的docker CE
+   列出版本，版本号从高到低
+
+```text
+$ dnf list docker-ce  --showduplicates | sort -r
+docker-ce.x86_64  18.09.0.fc26                              docker-ce-stable
+```
+
+安装指定版本的docker CE，需要指定完整的包名称，例如安装仓库中的这个版本 `18.03.0.ce-1.el7.centos` ，其命令为
+
+```text
+$ sudo dnf -y install docker-ce-18.03.0.ce
+```
+
+其他版本同理
+**启动docker CE**
+启动其实是启动docker deamon，即docker守护进程/docker引擎
+
+```text
+$ sudo systemctl start docker
+```
+
+以上即是CentOS从仓库中安装docker CE的全部过程，如果需要升级的话，移除之前的docker，再重复上面的过程即可。
+
+## 从RPM包安装
+
+RPM包在没有网络的时候就特别管用了，找一台有网络的电脑下载RPM包，这个官方地址列出了所有Fedora版本的docker，选择一个进行下载。
+`https://download.docker.com/linux/fedora/`
+比如我下载的文件叫做（**在当前目录**）
+`docker-ce-17.03.0.ce-1.fc24.x86_64.rpm`
+执行
+
+```text
+$ sudo dnf -y install docker-ce-17.03.0.ce-1.fc24.x86_64.rpm
+```
+
+启动守护进程
+
+```text
+$ sudo systemctl start docker
+```
+
+## 卸载
+
+移除docker
+
+```text
+$ sudo dnf remove docker-ce
+```
+
+移除镜像，容器，卷，网络，自定义文件等
+
+```text
+$ sudo rm -rf /var/lib/docker
+```
+
+## Windows10安装docker
+
+win10安装docker一般用于开发人员，用来当服务器使的很少。
+
+## 安装之前必读
+
+其实在开始在windows上并没有docker，因为docker的是需要Linux内核的支持的，现在的做法是在windows上安装一个Linux虚拟器，docker引擎其实是在Linux虚拟机里面跑着的。
+
+然而现在安装docker的时候会让选择是用Linux容器还是Windows容器，一般情况下还是选择Linux容器，如果你的程序最终会在Linux运行。
+
+windows版docker需要Microsoft Hyper-V的支持，即windows内置的虚拟机引擎，从win10开始支持，docker在安装的时候会自动开启，需要重启电脑。
+
+如果没有Microsoft Hyper-V，请考虑[docker toolbox](https://link.zhihu.com/?target=https%3A//docs.docker.com/toolbox/toolbox_install_windows/)
+
+## 系统要求
+
+- Windows 10 64bit，专业版、企业版或教育版（1607周年更新版，build 14393或更新）
+- BIOS要开启虚拟化，一般会自动开启
+- CPU SLAT 支持
+- 至少4GB内存
+
+## 安装
+
+进入[此页面](https://link.zhihu.com/?target=https%3A//hub.docker.com/editions/community/docker-ce-desktop-windows)下载`Docker for Windows Installer.exe`
+
+![img](https://pic2.zhimg.com/80/v2-b5b38f4aedae3fd67dfba156c6fe4a6c_720w.jpg)
+
+
+双击`Docker for Windows Installer.exe`然后一路下一步，安装完成！
+
+## 运行
+
+安装完成后docker不会自动运行，搜索docker点击运行。
+
+![img](https://pic3.zhimg.com/80/v2-b90591b8077c04121946f7213beb06af_720w.jpg)
+
+
+
+## macOS安装docker
+
+macOS下安装docker我不打算翻译，因为没钱买苹果电脑/捂脸，需要的哥们儿[点我](https://link.zhihu.com/?target=https%3A//docs.docker.com/docker-for-mac/install/)。
+
+# 自我总结安装docker：
+
+1.卸载旧版本
+
+```text
+sudo apt-get remove docker docker-engine docker-ce docker.io containerd runc
+```
+
+2.升级apt包索引
+
+```text
+sudo apt-get update
+```
+
+3.安装能够让apt使用HTTPS的包
+
+```text
+ sudo apt-get install \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    software-properties-common
+```
+
+4.添加官方的GPG key
+
+```text
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+```
+
+查看现在是否拥有了指纹`9DC8 5822 9FC7 DD38 854A E2D8 8D81 803C 0EBF CD88`的密匙，执行下面搜索命令，如果有类似回显说明拥有此密匙。
+
+```text
+$ sudo apt-key fingerprint 0EBFCD88
+pub   4096R/0EBFCD88 2017-02-22
+      Key fingerprint = 9DC8 5822 9FC7 DD38 854A  E2D8 8D81 803C 0EBF CD88
+uid                  Docker Release (CE deb) <docker@docker.com>
+sub   4096R/F273FCD8 2017-02-22
+```
+
+5.设置稳定版源
+
+必须安装稳定版源，即使安装体验版或者测试版也需要稳定版源，不同架构的机器需要不同安装命令，`lsb_release -cs`命令会返回是哪种Debian发行版，比如`xenial`，如果想安装体验版（edge）或者测试版（test），将命令中的stable换成相应的字符串即可。
+
+```text
+$ # x86_64 / amd64架构
+$ sudo add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+
+
+$ # armhf架构
+$ sudo add-apt-repository \
+   "deb [arch=armhf] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+
+
+$ #  arm64架构
+$ sudo add-apt-repository \
+   "deb [arch=arm64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+
+
+$ #  IBM Power (ppc64le)
+$ sudo add-apt-repository \
+   "deb [arch=ppc64el] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+
+
+$ #  IBM Z (s390x)
+$ sudo add-apt-repository \
+   "deb [arch=s390x] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+```
+
+6.升级apt包索引
+
+```text
+$ sudo apt-get update
+```
+
+7.安装最新版本的docker CE
+
+```text
+$ sudo apt-get install docker-ce
+```
+
+
+
+
+
+
+
+
+
+
+
+
+###终极总结大全
+
+学习网址：https://blog.csdn.net/weixin_43318626/article/details/89878536
+
+仓库
+
+# 登陆/注销docker
+docker login --username=[ 用户名 ]
+
+# 更改tag
+docker tag [ 原镜像名 or 镜像 id ] [ 用户名 ]/[ 仓库 ]:[ tag ]
+# [ 用户名 ]/[ 仓库 ]这个部分是可以任意取名的，写什么都可以，这个部分会作为REPOSITORY属性。
+# 但是如果要推送到某仓库，则必须是[ 用户名 ]/[ 仓库 ]这样，推送上去之后如果仓库在这个用户下不存在则会新建一个这个名字的仓库。
+
+# 推送镜像到仓库
+docker push [ 用户名 ]/[ 仓库 ]:[ tag ]
+
+
+
+
+
+
+
+
+
+镜像
+
+# 查找镜像
+docker search [ 条件 ]
+
+# 查询三颗星及以上名字包含alpine的镜像
+docker search -f=stars=3 alpine
+
+# 登陆/退出第三方仓库
+docker [ login/logout ] [ 仓库地址 ]
+
+# 获取镜像
+docker pull [ 仓库 ]:[ tag ]
+#仓库格式为 [仓库url]/[用户名]/[应用名] , 除了官方仓库外的第三方仓库要指定 url, 用户名就是在对应仓库下建立的账户, 一般只有应用名的仓库代表 官方镜像, 如 ubuntu、tomcat 等, 而 tag 表示镜像的版本号, 不指定时默认为 latest
+
+# 推送镜像到仓库
+docker push [ 仓库 ]:[ tag ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+本地镜像
+
+# 查看本地镜像
+docker images
+
+# 删除镜像
+docker rmi [ 镜像名 or 镜像 id ]
+
+# 删除指定镜像（当存在同一个ID的不同镜像时）
+docker rmi [ 仓库 ]:[ tag ]
+
+# 查看镜像详情
+docker inspect [ 镜像名 or 镜像 id ]
+
+# 打包本地镜像
+docker save [ 镜像名 or 镜像 id ] > [ 文件路径 ]
+
+# 导入镜像
+docker load < [ 文件路径 ]
+
+# 修改镜像tag
+docker tag [ 镜像名 or 镜像 id ] [ 新镜像名 ]:[ 新 tag ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+本地容器
+
+# 查看本地运行中的容器
+docker ps
+
+# 查看本地所有容器
+docker ps -a
+
+# 查看容器详情
+docker inspect [ 容器名 or 容器 id ]
+
+# 创建容器
+docker run --name [ 容器名 ] -it -p 8888:8888 -v [本地目录]:[新建容器的目录] [ 仓库名 ]:[ tag ]
+
+# 关闭容器(发送SIGTERM信号,做一些'退出前工作',再发送SIGKILL信号)
+docker stop [ 容器名 or 容器 id ]
+
+# 强制关闭容器(默认发送SIGKILL信号, 加-s参数可以发送其他信号)
+docker kill [ 容器名 or 容器 id ]
+
+# 启动容器
+docker start [ 容器名 or 容器 id ]
+
+# 重启容器
+docker restart [ 容器名 or 容器 id ]
+
+# 进入容器命令行
+docker exec -it [ 容器名 or 容器 id ] bash
+# 或者
+docker attach [ 容器名 or 容器 id ]
+
+# 将容器保存为镜像
+docker commit [ 容器名 or 容器 id ] [ 镜像名 ]:[ tag ]
+
+# 使用dockfile构建镜像
+docker build -t [ 镜像名 ]:[ tag ] -f [ DockerFile 名 ] [ DockerFile 所在目录 ]
+
+
+
+
+
+
+
+
+
+
+一个创建+启动tensorflow容器的例子
+
+# 下载镜像
+docker pull tensorflow/tensorflow
+
+# 创建容器
+docker run --name [ 容器名 ] -it -p 8888:8888 -v ~/tensorflow:/notebooks/data tensorflow/tensorflow
+# 通用形式
+docker run --name [ 容器名 ] -it -p 8888:8888 -v [本地目录]:[新建容器的目录] [ 仓库名 ]:[ tag ]
+
+#docker run运行镜像，
+#--name为容器创建别名，
+#-it保留命令行运行，
+#-p 8888:8888将本地的8888端口http://localhost:8888/映射，
+#-v ~/tensorflow:/notebooks/data 将本地的~/tensorflow文件夹挂载到新建容器的/notebooks/data下（这样创建的文件可以保存到本地~/tensorflow）
+#tensorflow/tensorflow为指定的镜像，默认标签为latest（即tensorflow/tensorflow:latest）
+
+
+
+
+
+
+
+
+
+
+
+
+Q1
+根本不存在“镜像名”这个东西吧，只有“镜像所在的仓库名”、“标签”、“镜像ID”吧！所说的“镜像名”是指镜像所在的仓库名称吗？？ 这样很不合理吧。。
+A1
+在一个教程上看到：
+
+同一仓库源可以有多个 TAG，代表这个仓库源的不同个版本，如ubuntu仓库源里，有15.10、14.04等多个不同的版本，我们使用 REPOSITORY:TAG 来定义不同的镜像。
+
+按这意思应该是 [ REPOSITORY : TAG ] 这样就表示一个镜像了，也就是所谓的镜像名。
+
+Q2
+我在自己的账户下新建了一个仓库，里面没有什么镜像的名字，只有tag，意思是这个仓库的所有镜像都是同一个名字？只有tag的不同？
+A2
+不是的，[ REPOSITORY : TAG ]表示的应该是某个镜像的名字，同一个镜像（同一个ID）会有多个名字，同一个仓库的不同标签表示的镜像可能是同一个ID也可能是不同的ID。
+
+Q3
+docker ps -a 列出容器列表的时候，容器会有真正自己的“name”也有“ID”，但是第二个属性是“Image”，里面是镜像的仓库名称。。。？？？所以真的就是仓库名称就代表了镜像名称了？？但是没有tag怎么知道是哪一个image？？ 另：在新建容器的时候确实是需要tag的，没有写默认latest。
+A4
+未知。
+
+Q4
+当某指令要写[ 镜像名or镜像ID ]时，当ID有重复的时候，可以用镜像名，就是指仓库名吗？还是指[ 仓库名 ]:[ tag ]这样？
+A4
+经过尝试，镜像名就是指[ REPOSITORY : TAG ]。
+
+Q5
+当我使用docker tag [ 镜像名 or 镜像 id ] [ 新镜像名 ]:[ 新 tag ]，是新建了一个image还是只是多指定了一个“指向这个ID”的tag而已？
+实际操作的时候会在docker images里面多生成一行记录，原本的不变，而且在我镜像ID有重复、存在多个的时候这条指令并不会报错，说明这些ID相同、仓库和tag不同的images根本就是同一个image？？
+另外，这条指令中的[ 新镜像名 ]似乎是可以随意取的，命令完成之后再查看，这个[ 新镜像名 ]成为了一个新的仓库名，这是什么意思？
+A5
+经过多次尝试这条指令
+
+>> docker tag [ 镜像名 or 镜像 id ] [ 新镜像名 ]:[ 新 tag ]
+1
+有一些结论：
+
+这条指令里的 [ 镜像名 or 镜像 id ] 可以是[ REPOSITORY : TAG ]，也可以写ID，没有报错，因此确实这些ID相同、仓库和tag不同的images根本就是同一个image。
+
+这条指令只是一个修改镜像名（即[ REPOSITORY : TAG ]）的指令，并不会生成一个新的image，原来的名字也依然存在。
+
+另外，当我尝试两次执行这条指令， [ 新镜像名 ]:[ 新 tag ]完全相同， [ 镜像名 or 镜像 id ] 采用不同的，再docker images查看，结果是新生成两行images，但是第一条指令的tag变为none，第二条指令的正常。
+
+在删除镜像指令
+
+>> docker rmi [ REPOSITORY : TAG ]
+1
+执行的时候也不是删除这个镜像，只是删除[ REPOSITORY : TAG ]指向这个镜像的关系，当某镜像ID确认唯一的时候使用指令
+
+>> docker rmi [ 镜像ID ]
+1
+才是删除这个镜像。
+
+关于这个[ 新镜像名 ]，又把我搞混乱了。。镜像名应该是[ REPOSITORY : TAG ]啊，那这个新取的名字变成了一个仓库名，是新建了一个仓库的意思？
+是的，这个[ 新镜像名 ]，如果是之前不存在的，那么是新建了一个仓库名，标准的应该是[ 用户名 / 仓库名 ]，这样推送的时候就会在用户下新建这个仓库，也可以使用原来的仓库，新的标签。

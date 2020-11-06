@@ -1,0 +1,1287 @@
+[ 
+
+
+
+
+
+[Oracle语句学习网址](https://www.cnblogs.com/jack204/archive/2012/04/30/2477137.html)
+
+## Oracle : sql语言种类:
+
+结构化查询语言(Structured Query Language ） 针对于关系型数据库的数据库语言
+
+**ddl**: Data Defifined Language 对表结构的增删改查：create drop show alter
+
+**dml**: Data Manipulation Language 对表记录的增删改：insert delete update
+
+**dql**: Data Query Language 对表记录的查询：select
+
+**dcl**: Data Control Language 对表权限的控制：grant revoke
+
+**tcl**: transaction control language 事务管理：commit 提交并结束事务处理   savepoint 标记事务中可以回滚的点   rollback 撤销事务中已完成的工作
+
+## Oracle中的 dcl  :用户的权限管理：
+
+```sql
+/*1.5、oracle的dcl*/
+
+/*创建一个表空间 并指定其文件的位置*/
+
+create tablespace miaospace datafile
+
+'D:\soft_other\oraclesoft\oradata\orcl\miao01.DBF'
+
+size 1M;
+
+/*创建用户并指定密码和默认表空间*/
+
+create user miao identified by "123" default
+
+tablespace miaospace;
+
+/*赋予用户创建连接的权限,session 代表连接数据库的权限*/
+
+grant create session to miao;
+
+/* grant 授权的命令，赋予用户创建表的权限*/
+
+grant create table to miao;
+
+/*赋予用户：角色 dba  角色是权限的集合*/
+
+grant dba to miao;
+
+/*取消权限*/
+
+revoke create table from miao;
+```
+
+##### 不同用户之间的相互调用：
+
+*1.用户想调用其他用户的表，直接（用户名.表名）即可调用*
+
+*2.用户名想调用其他用户的函数和存储过程，直接 （用户名.【函数名/存储过程名】）即可调用，*
+
+*只能相同等级的用户之间才可以调用，等级低的用户调用不了等级高的用户的函数和存储过程，且两个用户之间都必须拥有dba权限；*
+
+## Oracle 数据库中的基本数据类型：
+
+```sql
+/*oracle中数据类型*/
+
+/*1： 字节类型 lob blob基于字节的大对象 clob基于字符的大
+
+对象 long大文本*/
+/*lob是字节类型的基类型，在Oracle中不能使用，只能使用他的子分支，blob和clob类型*/
+
+/*2： 整数类型  int integer  number(n,m)*/
+
+/*3： 浮点类型  number(n,m) float*/
+
+/*4： 字符类型  char(n) 固定长度
+
+         varchar(n) 可变长度
+
+         varchar2(n) 可变长度
+
+    char varchar varchar2的区别
+
+    相同之处：都是保存字符类型的数据
+
+    不同之处：1  varchar是sql标准：所有数据库都识别
+
+           varchar2是oracle特有
+
+         2  varchar最大长度是2000  
+
+           varchar2最大长度是4000
+
+         3  varchar保证汉字是2个字节
+
+           varchar2保证汉字由编码集决定
+
+         4  varchar对空字符串不处理           varchar2把空字符用null替换     
+
+          
+
+*/
+
+/*5:  日期类型 date  timestamp
+
+    注意1： oracle中没有boolean/bool 没有time类型
+
+    注意2： oracle中char(n)/varchar(n)/varchar2(n)
+
+的n指的都是字节个数
+
+    注意3： varchar2是oracle的特有类型   
+
+*/
+```
+
+## 建表注意事项：
+
+**varchar和varchar2必须要有长度不然会报错，lob类型，是Oracle数据库中的指针不是数据类型，所以建表时不能用，会报错！**
+
+示例：
+
+```sql
+CREATE TABLE ee (
+	site ROWID,
+	names VARCHAR (1),
+	sex VARCHAR2 (12),
+	dd CHAR,
+	ghh BLOB,
+	ghhh CLOB,
+	age INTEGER,
+	er NUMBER,
+	err NUMBER (3, 2),
+	errr LONG
+);
+```
+
+## 流程控制语句：
+
+#### 1.case when then else end:
+
+case 要传入值 ，
+
+when 对传入的值进行判断，
+
+then （when关键字判断后执行的语句）
+
+else(都没有执行后才执行的语句)，
+
+end(结束语句，后面不能写东西，但可以给当前的case输出的东西起别名)
+
+***判断 case后面不用传值，直接在 when写判断，选择的话要在 case后面进行传值***
+
+case传值 when判断 then执行输出语句 when判断 then执行输出语句 else都没运行时执行输出语句不用进行判断 end
+
+#### 2.三目运算符：
+
+if(三目运算符)；	示例：if(1>0,1,2)	此判断不支持？和：所以只能用逗号分隔即可使用
+
+#### 3.判断是否为null：
+
+if null(1,2); 			为空输出第一个值，不为空输出第二个值
+
+## 1.跨用户访问表
+
+示例：
+
+```sql
+/*当只写一个表名时 默认时本用户的表*/
+
+select * from tab_2;
+
+/*想使用别人的表：必须加上用户名 而且有访问权限*/
+
+select * from miao.tab_2;
+```
+
+oracle的事务默认是手动提交 不提交 数据库不会更改
+
+## 2.伪列+分页：
+
+oracle所有的表 不需要创建和定义 都有两个伪列(为了方便查询)：ROWID ROWNUM
+
+```sql
+/*伪列1：rowid*/
+
+select *,rowid,rownum from tab_2;/*错误：：：获取伪列时 
+
+需要给表起个别名*/
+
+select t.*,t.rowid,rownum from tab_2 t;
+
+/*rowid：AAASN+AAGAAAAANAAD 记录的本
+ 行数据的物理地址*/
+
+/*通过主键查询某行 需要对指定表对应的文件进行扫描
+
+  通过rowid查询某行 可以准确定位行数据的位置 不需要扫描 效
+
+率高*/
+
+select * from tab_2 where t1=1;
+
+select * from tab_2 where
+
+rowid='AAASN+AAGAAAAANAAA';
+
+```
+**ROWID是物理存在的，它使用基于64为编码的18个字符来唯一标识一条记录物理位置的一个ID，类似于Java中一个对象的哈希码**
+
+**(内存地址)，都是为了唯一标识对应对象的物理位置，需要注意的是ROWID虽然可以在表中进行查询，但是其值并未存储在表中，**
+
+**所以不支持增删改操作**
+
+```sql
+
+/* 伪列2：ROWNUM  存在的意义实现oracle的分页
+
+  获取结果集后：自动给结果集添加的行号(从1开始)*/
+
+/*每页3行 第一页*/
+
+select t.*,rownum from tab_2 t;
+
+select t.*,rownum from tab_2 t where rownum<=3;
+
+/*每页3行 第2页*/
+
+select t.*,rownum from tab_2 t where rownum>=4 and
+
+rownum<=6;
+
+/*通过子查询来实现分页*/
+
+select * from (select t1,t2,t3,rownum r from tab_2) 
+
+t where t.r>=4 and t.r<=6;
+
+select * from (select t1,t2,t3,rownum r from tab_2
+
+where rownum<=6) t where t.r>=4 
+
+```
+
+**rownum是获取结果集后：自动给结果集添加的行号(从1开始)**
+
+## 3.mysql/oracle :dml不同之处：
+
+mysql支持一次插入多行：insert into tab_1 values(1,'呵呵'),(2,'哈 哈');
+
+oracle不支持：每个insert语句只能插入一行
+
+## 4.delete和truncate的区别：
+
+```sql
+/*删除表记录：delete和truncate*/
+
+delete from tab_2;
+
+truncate  table tab_2;
+```
+
+   相同之处：delete和truncate都可以用于删除表记录
+
+   不同之处：1 delete是dml(数据操作 对表记录的增删改) 需要提交事务 truncate是ddl(数据定义 对表结构的增删改查) 不需要事务
+
+​       				2 delete后面可以加where 删除指定行 truncate后面不能加条件 只能删除所有记录 truncate效率高于delete
+
+## 5.把结果集作为记录插入表中：
+
+```sql
+/*把查询的结果插入到指定的表中*/
+
+insert into tab_8
+
+select tid,tname from tab_7;
+```
+
+## 6.oracle 外连接方言：
+
+```sql
+/*oracle的外连接方言：：(+) 保证另外一张表的完整性*/
+
+select * from student s ,teacher t where
+
+t.tid(+)=s.stid;
+```
+
+## 7.序列  sequence:
+
+**主要的用途是生成表的主键值 实现自动增长**
+
+***注意：已经生成过的序列号不能被获取，可以被多张表引用，但每使用一次创建的序列对象，数值都会增加一次，所以不管不管谁调用都只是调用上一个表使用并			增加后的序列的对象***
+
+解释：和表(table)一样都是一种数据库对象
+
+​			序列(SEQUENCE)其实是序列号生成器，可以为表中的行自动生成
+
+​			序列号，产生一组等间隔的数值(类型为数字)。
+
+```sql
+/*sequence*/
+
+create sequence s_1;
+
+select s_1.nextval  from dual;/*获取序列s_1的下一个值*/
+
+select s_1.currval  from dual;/*获取序列s_1的当前值*/
+
+/*同一个sql语句中多个nextval只加一次*/
+
+select s_1.nextval,s_1.nextval,s_1.currval  from
+
+dual;
+
+insert into student(sid,sname)
+
+values(s_1.nextval,concat('哈哈',s_1.nextval));--字符
+
+串拼接concat
+
+insert into student(sid,sname)
+
+values(s_1.nextval,'哈哈'||s_1.nextval);--字符串拼接||
+
+drop sequence s_2;/*删除序列*/
+
+create sequence s_2  
+
+start with 10  --指定起始值  默认值1
+
+increment by 2  --指定每次加的步长 默认值1
+
+maxvalue  30   --指定最大值
+
+minvalue 10   --循环时的最小值
+
+cycle      --cycle循环  nocycle 不循环
+
+cache 4;     --缓存个数 为了减少对数据库的访问 每次取4个序列值放在缓存中 缓存默认放20个序列值
+```
+
+示例：
+
+```sql
+-- 序列循环
+
+	create sequence s_12 start with 1000 cycle minvalue 0 maxvalue 1000 increment by 1 cache 5
+
+-- 创建  序列 序列名s_12 开始值是1000 开启循环 循环最小值是0 循环最大值是1000 循环每次加1 每次往缓存池中存5个序列值
+```
+
+
+
+## 8.索引：
+
+```sql
+/*索引：index*/
+
+-- 索引是一种为了提高查询效率数据库对象
+
+-- 索引类似于 书的目录   
+
+-- 索引是定义在某个表的某个列上
+
+-- 索引和表分开存储的
+
+-- 索引是程序员创建 供数据库查询时使用(可以减少io操作)
+
+-- 数据库会自动使用和维护索引
+
+select * from user_ind_columns where
+
+TABLE_NAME='STUDENT';/*查询指定表有那些索引及其列*/
+
+/*
+
+索引分类：
+
+    唯一性索引：有unique约束的列 自动创建唯一性索引
+
+    非唯一性索引： 程序员自己创建的index
+
+建议对列创建索引的情况
+
+    1 字段经常出现在where条件后面
+
+    2 查询的结果集行数<表总行数的4%
+
+    3 字段的值不能频繁修改
+
+    4 字段不能有大量null值
+
+    5 字段的值分布广
+
+*/
+
+create table tab_11(
+
+  tid int primary key,
+
+  tname varchar(20) unique,
+
+  tage int,
+
+  tsex char(2)
+
+);
+
+select * from user_ind_columns where
+
+TABLE_NAME='TAB_11';
+
+create index ind_1 on tab_11(tage);/*创建索引*/
+
+drop index ind_1;/*删除索引*/
+```
+
+## 伪列，序列，索引 总结：
+
+```sql
+-- 1.伪列	：  表中默认的两个隐藏字段
+
+ 	rowid rownum
+
+	-- rowid 代表数据的物理地址值 rownum 代表为结果集添加行号，默认从1开始，一般用来进行分页功能
+
+
+-- 2.序列循环 ：	 相当于表的主键，主要添加数据时使用
+
+		create sequence s_12 start with 1000 cycle minvalue 0 maxvalue 1000 increment by 1 cache 5
+
+	-- 创建  序列 序列名s_12 开始值是1000 开启循环 循环最小值是0 循环最大值是1000 循环每次加1 每次往缓存池中存5个序列值
+
+	-- 查询创建的所有序列 
+
+	select * from user_sequences;
+
+
+-- 3.索引	:	程序员光创建不使用
+
+	-- 为rt用户的yu表的name字段创建索引
+
+		create index index_1 on RT.YU(name); 
+
+	-- 删除指定名字的索引
+
+		drop index index_1;
+		
+	-- 查询索引 
+
+		select * from user_ind_columns where table_name='YU';
+		
+```
+
+## 9.视图：
+
+概念：视图就是把一条sql语句查询到的虚拟表，变成一张可以命名和引用的虚拟表：
+
+优点：简化sql语句
+
+创建view视图语句：
+
+```sql
+create view 命名的表名 as sql语句;
+```
+
+注意事项：可以对view(视图)进行增删改，但不能违反基表的约束
+
+删除view(视图):
+
+```sql
+drop view 视图名;
+```
+
+## 10.ddl不同之处：表结构，约束
+
+1、没有auto_increment oracle实现自动增长通过序列实现 
+
+2、mysql中check无效 oracle可以使用
+
+```sql
+/*复习约束：
+
+  1  唯一： unique
+
+  2  非空：not null
+
+  3  默认:default
+
+  4  检查:check  为表添加额外的约束
+  
+  alter table 表名 add constraint 自定义约束名 check (约束表达式);
+
+  5  主键: primary key
+
+      特点：1 唯一 2 不为空 3 可以被从表的外键引用
+
+  6  外键:foreign key
+
+      特点：1 可以为空 2 可以重复 3 一旦有值 此值必须在主表的主键列中存在
+      
+  alter table 表名 add constraint 自定义约束名 foreign key 外键名 references 主表表名（主表主键字段名）
+
+*/
+```
+
+
+
+## 11.事务：
+
+事务四大特征：
+
+1、原子性：一个事务是一个不可分割的工作单位，事务中包括的操作要么都做，要么都不做。  提交事务后，事务整体的原子性
+
+2、一致性：事务必须是使数据库从一个一致性状态变到另一个一致性状态。								 提交事务后，数据完整的一致性
+
+3、隔离性：一个事务的执行不能被其他事务干扰。																			提交事务后，事务并发的隔离性
+
+4、持久性：指一个事务一旦提交，它对数据库中数据的改变就应该是永久性的。						  提交事务后，数据结果的持久性
+
+### TCL:事务管理语句：
+
+TCL指的是事务控制语言。
+
+事务是指作为单个逻辑工作单元执行的一组相关操作。事务是最小的工作单元，作为一个整体进行工作。事物有四个特点：原子性、一致性、隔离性、持久性。个人感觉事物操作类似于你做一个事，要么全做，要么全不做。
+
+保证事务的整体成功或者失败，称为事务控制。
+
+用于事务控制语句：
+
+commit		提交并结束事务处理
+
+savepoint	标记事务中可以回滚的点
+
+rollback	撤销事务中已完成的工作
+
+#### Commit
+
+commit用于提交前面所做的所有操作。
+
+有一些操作需要手动添加commit才能够将修改提交给库，而有一些操作只需要执行系统会自动commit。而在Oracle中这些操作称之为锁（具体不在此介绍）。
+
+DML语言需要使用commit，比如insert，delete，update等修改表中数据
+
+DDL语言不需要写commit，比如create，drop等改变表结构的（其内部隐藏了commit）;
+
+#### 回滚
+
+回滚命令使数据库状态回到某次已经标记的提交状态。使用回滚需要注意，加入数据库已经commit则没办法调用回滚，而在Oracle中DDL语言(创建或更改表结构)时会自动commit，此时则没办法使用回滚，而对于DML语言(增删改查)则可以使用回滚。
+
+> savepoint mark1;                      保存回滚点1
+>
+> insert into select_tab1 values(7,'马云云7');  添加数据
+>
+> rollback to savepoint mark1;              返回回滚点1
+
+在Oracle中可以设置多个回滚，只需要名字不一样，在调用时需要使用rollback来回滚就可以了。
+
+**根据savepoint 关键字定义的回滚名，用rollback to savepoint  定义的回滚名，进行回滚，名字可以定义成时间名，这样就可以根据指定时间进行回滚操作**
+
+## 12.Oracle函数
+
+### 1.数字相关函数
+
+#### 1.1四舍五入：
+
+ceil(n);	大于等于n的最小整数
+
+floor(n);	小于等于n的最大整数
+
+round(n);	n四舍五入取整数
+
+round(n,m);	n四舍五入取n位小数
+
+#### 1.2幂相关：
+
+squt(n);	n开平方
+
+power(n,m);	求n的m次方
+
+#### 1.3基本运算：
+
+mod(n,m);	求n余m的值
+
+abs(n);	求绝对值
+
+trunc(n);	截取n的整数部分
+
+trunc(n，m);	截取n，保留m位小数
+
+### 2.日期转换函数
+
+#### 2.1日期相关函数：
+
+sysdate	特殊字段，每个表中都可使用，获取当前时间
+
+systimestamp	特殊字段，每个表中都可使用，获取当前时间戳
+
+add_months(date,n);	在date基础上添加n月
+
+round(date,'year');	获取当前年的第一天
+
+round(date,'month');	获取当前月的第一天
+
+round(date,'day');	获取当前周的第一天
+
+last_day(date);	获取本月的最后一天
+
+extract(year from sysdate);	提取sysdate日期中的年份
+
+extract(month from sysdate);	提取sysdate日期中的月份
+
+extract(day from sysdate);	提取sysdate日期中的天
+
+extract(hour from sysdate);	提取sysdate日期中的小时
+
+extract(minute from systimesatmp);	提取systimesatmp日期中的信息
+
+extract(second from systimesatmp);	提取systimesatmp日期中的信息
+
+#### 2.2日期转换函数：
+
+to_date(str,pattern);	字符串转换为日期
+
+```sql
+-- 示例：
+select to_date('1987-11-12 13:14:15','yyyy-MM-dd HH24:mi:ss') from  daul;
+```
+
+to_char(sysdate,pattern);	把日期类型转成指定类型的字符串
+
+```sql
+-- 示例：
+select to_char(sysdate,'yyyy-MM-dd HH24:mi:ss') from  daul;
+```
+
+to_number('$22,9003.12','$99,9999.99');	把字符串转成number类型的数字
+
+```sql
+-- 示例：
+select to_number('$22,9003.12','$99,9999.99') from daul;
+```
+
+### 3.字符串相关的函数
+
+length(str);	获取字符的个数
+
+ascii(x);	获取字符x在编码表ascii中的整数
+
+concat(str1,str2);	字符串拼接：：只能有两个整数，而且可以拼接多个字符串
+
+#### 3.1去除空格：
+
+trim(str);	去除两空格	
+
+ltrim(str);	去除左边空格	
+
+rtrim(str);	去除右边空格
+
+#### 3.2获取指定字符的下标：
+
+instr(str1,str2);	获取str1中str2第一次出现的位置，下表从1开始
+
+instr(str1,str2,startIndex);	从startIndex处开始找，获取str1中str2第一次出现的位置
+
+#### 3.3截取字符串
+
+substr(str,startIndex);	从startindex位置处截取到末尾的子串
+
+substr(str,startIndex,len);	从startIndex位置处截取str，截取len个字符
+
+#### 3.4转换字符串大小写：
+
+upper(str);	所有字母转为大写
+
+lower(str);	所有字母转为小写
+
+#### 3.5正则提取指定的字符
+
+regexp_replace('12sdf3','[ ^0-9 ]');	利用正则表达式提取指定的字符
+
+#### 3.6替换字符串
+
+replace(kkk,'f','')；	替换指定字符串，替换为空字符串，字符串的长度也会改变
+
+### 4.随机函数
+
+dbms_random.random	随机一个Integer类型的数字
+
+dbms_random.value	随机一个[0,1]的数字
+
+dbms_random.string(x,n);	随机含有n位的字符串，字符类型由x决定
+
+-- ’u‘,'U'	- 返回字符串是大写希腊字母
+
+-- 'l','L'	-返回字符串是小写希腊字母
+
+-- 'a','A'	- 返回字符串混合大小写希腊字母
+
+-- 'x','X'	- 返回字符串混合大写希腊字母和数字
+
+-- 'p','P'	- 返回字符串是任何可打印字符串
+
+-- 其他字母返回的是大写希腊字母
+
+sys_guid();	随机一个32位的16进制的字符串
+
+------
+
+***注意：Oracle中单引号和双引号的区别：***
+
+双引号：只用于	密码，关键字，表名，列名，别名	中名字不加双引号默认是大写，加了双引号保存原状；
+
+单引号：表示字符串，转义字符类似于Java中的	"\\\"	
+
+------
+
+## 13.PL/SQL
+
+**注意：	plsql语句内可以直接写dml的增删改的sql语句，但是dql的查询sql语句只能用来赋值使用，**
+
+***利用游标修改数据只是为了确定修改的是具体哪一行的数据，用来确定行的***
+
+#### 1.流程控制语句
+
+```sql
+-- DECLARE 关键字用来声明变量
+DECLARE
+names VARCHAR(13);
+BEGIN
+-- 控制台输入 
+names :='&aaa';
+-- 捕获异常，WHEN others THEN 捕获指定异常，others 代表所有类型的异常 
+EXCEPTION
+WHEN others THEN
+dbms_output.put_line('抛出了异常！');
+END;
+
+-- 定义异常，并抛异常
+DECLARE
+-- 定义异常
+exp EXCEPTION;
+BEGIN
+-- 抛出异常
+raise exp;
+EXCEPTION
+-- 捕获 exp 类型的异常，可以定义多个，写多个 when 异常名 then 捕获即可
+WHEN exp THEN
+dbms_output.put_line('捕获到了自定义的异常！');
+
+-- 两种赋值方式
+DECLARE
+names VARCHAR(12);
+BEGIN
+--冒号等于号变量赋值
+names:=13;	
+-- SQL语句查询表利用 INTO 关键字进行单个数据进行赋值,把左边sql语句查询到的变量的值赋值给右边plsql上声明的值
+select sname INTO names FROM STUDENTINFO WHERE SNO='s1023';	
+-- 输出结果的语句 ，|| 代表拼接字符串
+dbms_output.putline('结果为='||names);
+END;
+
+
+-- if单支
+DECLARE
+nage INTEGER := 19;
+BEGIN
+IF nage=19 THEN
+dbms_output.put_line('年龄是='||nage);
+END IF;
+END;
+
+
+
+-- if双支
+DECLARE
+nage INTEGER := 20;
+BEGIN
+IF nage=20 THEN
+dbms_output.put_line('结果一，年龄是='||nage);
+ELSE
+dbms_output.put_line('结果二，年龄是='||nage);
+END IF;
+END;
+
+
+
+-- if多支 
+DECLARE nage NUMBER := 20 ;
+BEGIN
+
+IF nage = 18 THEN
+	dbms_output.put_line ('if结果1=' || nage) ;
+ELSIF nage = 19 THEN
+	dbms_output.put_line ('if结果2=' || nage) ;
+ELSIF nage = 20 THEN
+	dbms_output.put_line ('if结果3=' || nage) ;
+ELSE
+	dbms_output.put_line ('if结果4=' || nage) ;
+END
+IF ; EXCEPTION
+WHEN others THEN
+	dbms_output.put_line ('抛出了异常！') ;
+END ;
+
+
+
+-- case判断输出
+DECLARE
+nage INTEGER :=9;
+BEGIN
+CASE
+WHEN nage > 10 THEN
+dbms_output.put_line('case 1 判断的结果为='||nage);
+WHEN nage < 10 THEN
+dbms_output.put_line('case 2 判断的结果为='||nage);
+ELSE
+dbms_output.put_line('没有此选项！');
+END CASE;
+END;
+
+
+
+-- case选择输出
+DECLARE
+nage INTEGER := 10;
+BEGIN
+CASE nage
+WHEN 1 THEN
+dbms_output.put_line('case1选择输出，结果为='||nage);
+WHEN 10 THEN
+dbms_output.put_line('case2选择输出，结果为='||nage);
+ELSE
+dbms_output.put_line('没有此选项！'); 
+END CASE;
+END;
+
+
+
+-- for循环 
+DECLARE
+BEGIN
+FOR i in 1..4 loop
+dbms_output.put_line('if循环='||i);
+END loop;
+END;
+
+
+
+-- while循环 
+DECLARE
+i INTEGER:=1;
+BEGIN
+while i<10 loop
+dbms_output.put_line('while循环='||i);
+i:=i+1;
+END loop;
+END;
+
+
+-- while循环遍历输出九九乘法表
+DECLARE
+i INTEGER:=1;
+j INTEGER:=1;
+BEGIN
+while i<10 loop
+	while j<=i loop
+		dbms_output.put(j||'*'||i||'='||(i*j)||'	');
+	j:=j+1;
+	END loop;
+j:=1;
+dbms_output.put_line('');
+i:=i+1;
+END loop;
+END;
+```
+
+#### 2.函数
+
+***注意：函数的参数后参数类型不能带长度，函数和存储过程都不支持带长度的类型***
+
+```sql
+-- 函数	需要返回值，函数写法,该函数能在sql语句中使用，也可以在plsql中调用
+create or replace function one (names in out varchar) return varchar2 IS
+BEGIN
+END;
+-- 存储过程	不需要返回值，函数写法，该函数不能再sql语句中使用，只能在plsql程序中调用
+create or replace procedure two(names in out varchar2)IS
+BEGIN
+END;
+```
+
+**2.1函数，需要返回值，语法**
+
+```sql
+create or replace function 函数名(参数1 模式 参数类型)
+
+return 返回值类型
+
+as
+
+变量1 变量类型;
+
+变量2 变量类型;
+
+begin
+
+函数体;
+
+end 函数名;
+```
+
+#### **3.参数的模式**
+
+**有3种:(如果没有注明, 参数默认的类型为 in)**
+
+**in**: 为只读模式, 在函数中, 参数的值只能被引用, 不能被改变;
+
+**out**: 为只写模式, 只能被赋值, 不能被引用，（修改指定引用，指向的地址值中的数据，没有引用不能直接修改，会报错）;
+
+**in out**:  可读可写
+
+***注意：out 和 in out只能修改变量，所以传参时只能传入变量名代表的值，不能直接传入具体的数据，不然会报错***
+
+***示例：读入两个值, 返回比较大的值***
+
+```sql
+create or replace function function1(para1 in number, para2 in number) 
+
+return number 
+
+as 
+
+begin
+
+	if para1 > para2 then
+
+		return para1;
+
+	else
+
+		return para2; 
+
+	end if;
+
+end function1;
+```
+
+#### 4.PLSQL支持的参数类型
+
+```sql
+--plsql的数据类型
+   --1 支持所有的sql类型： 
+   --     int float number(n,m)   char varchar(n) varchar2(n)  date  timestamp  clob blob 
+   --2  支持boolean类型，此类型只能在plsql中使用，		不能在 sql的查询语句中使用，sql语句不识别
+
+   --3  %type  列(column)的类型
+
+ --定义变量接受列数据时  变量的精度不能比列精度低
+    sname2 student.sname%type;--变量sname2的类型与student表sname列的类型一致
+    sage2 student.sage%type;--变量sage2的类型与student表sage列的类型一致
+    sex2 student.sex%type;--变量sex2的类型与student表sex列的类型一致
+
+ --4 %rowtype	行(row)的类型,可以接收表中的一行数据
+
+--定义一个%rowtype类型的变量 接受行数据 
+stu  student%rowtype;--stu可以接受student表一行的数据
+```
+
+
+
+#### 5.游标的使用
+
+解释：游标就是用sql语句查询出的一条数据
+
+隐式游标的属性：隐式游标的名称是:	SQL	，显示游标也有此属性不过名字是自定义的
+
+sql%found		有数据 为true
+sql%notfound	没有数据为true
+sql%isopen		是否打开游标
+sql%rowcount	返回影响的行数
+
+```sql
+-- 定义并取出单个游标
+
+DECLARE
+-- 定义游标
+cursor j is SELECT * FROM SCORE WHERE sno='s1021';
+-- 存储游标的数据
+ks j%rowtype;
+BEGIN
+-- 打开游标
+open j;
+-- 取出游标的数据，并赋值给 ks 变量
+FETCH j INTO ks;
+-- 输出游标的数据
+dbms_output.put_line('结果为='||ks.id);
+-- 关闭游标
+close j;
+END;
+
+
+
+
+-- FOR循环遍历输出多个游标，第一种写法
+
+DECLARE
+-- 定义游标
+cursor j is SELECT * FROM SCORE;
+BEGIN
+FOR i in j loop
+-- 输出游标的数据
+dbms_output.put_line('结果为='||i.sno);
+END loop;
+END;
+
+
+-- FOR循环遍历输出多个游标，第二种写法
+
+DECLARE
+BEGIN
+FOR i in (SELECT * FROM SCORE) loop
+-- 输出游标的数据
+dbms_output.put_line('结果为='||i.sno);
+END loop;
+END;
+
+
+
+
+
+-- 游标多表查询必须自己写字段说明字段是谁的，for循环遍历游标分不清字段属于哪张表
+DECLARE
+BEGIN
+	FOR i IN (
+		SELECT
+			s.SNO,
+			s.SNAME,
+			s.SAGE,
+			r.LABEXAM,
+			r.WIREXAM
+		FROM
+			STUDENTINFO s
+		INNER JOIN SCORE r ON s.SNO = r.SNO
+		WHERE
+			s.SAGE = 18
+	) loop dbms_output.put_line (
+		'SNO=' || i.sno || 'SNAME=' || i.sname || 'SAGE=' || i.sage || 'WIREXAM=' || i.wirexam || 'LABEXAM=' || i.labexam
+	) ;
+END loop ;
+END ;
+
+
+
+
+-- 游标单表修改数据
+DECLARE
+-- 定义游标 FOR UPDATE 代表此sql语句查询出来的数据可以进行 dml 即增删改的操作
+cursor summ IS SELECT * from SCORE for update;
+BEGIN
+FOR i in summ loop
+	IF i.wirexam<100 THEN
+-- 对游标进行增删改时sql语句正常写，修改的行数直接就是当前游标代表的行数
+		update score set wirexam=18 where current of summ;
+	END IF;
+dbms_output.put_line(i.id);
+END loop;
+END;
+
+
+
+-- 游标多表修改数据
+DECLARE
+cursor summ IS SELECT s.sname,r.wirexam,r.labexam ,r.id FROM STUDENTINFO s, SCORE r WHERE s.sno=r.sno FOR UPDATE;
+BEGIN
+FOR i in summ loop 
+	IF i.wirexam<100 THEN
+-- 虽然游标是多表查询的，但是修改时sql语句正常写，修改哪个表就写哪个表，不需要写多个表
+-- 但是where后要确定修改的数据是哪个表的具体行数,所以，当前修改表字段=游标对应要修改表的任意字段,最好是修改哪一列就写哪一列的字段，保证要修改字段行数的准确性
+	dbms_output.put(i.sname||'+'||i.wirexam);
+		update SCORE SET WIREXAM=35,labexam=1 WHERE labexam = i.labexam;
+	dbms_output.put_line('=='||i.sname||'+'||i.wirexam);
+	END IF;
+END loop ;
+end;
+```
+
+#### 6.Oracle 异常
+
+##### 1.Oracle 的预定义异常：
+
+```sql
+DECLARE
+BEGIN
+EXCEPTION
+WHEN ACCESS_INTO_NULL THEN
+dbms_output.put_line('ORA-06530	:	试图访问未初始化对象的时候出现');
+WHEN CASE_NOT_FOUND THEN
+dbms_output.put_line('ORA-06592	:	如果定义了一个没有ELSE子句的CASE语句，而且没有CASE语句满足运行时条件时出现该异常');
+WHEN COLLECTION_IS_NULL THEN
+dbms_output.put_line('ORA-06531	:	当程序去访问一个没有进行初始化的NESTED TABLE或者是VARRAY的时候，会出现该异常');
+WHEN CURSOR_ALREADY_OPEN THEN
+dbms_output.put_line('ORA-06511	:	游标已经被OPEN，如果再次尝试打开该游标的时候，会出现该异常');
+WHEN DUP_VAL_ON_INDEX THEN
+dbms_output.put_line('ORA-00001	:	如果插入一列被唯一索引约束的重复值的时候，就会引发该异常（该值被INDEX认定为冲突的）');
+WHEN INVALID_CURSOR THEN
+dbms_output.put_line('ORA-01001	:	不允许的游标操作，比如关闭一个已经被关闭的游标，就会引发');
+WHEN INVALID_NUMBER THEN
+dbms_output.put_line('ORA-01722	:	给数字值赋非数字值的时候，该异常就会发生，这个异常也会发生在批读取时候LIMIT子句返回非正数的时候');
+WHEN LOGIN_DENIED THEN
+dbms_output.put_line('ORA-01017	:	程序中，使用错误的用户名和密码登录的时候，就会抛出这个异常');
+WHEN NO_DATA_FOUND THEN
+dbms_output.put_line('ORA_06548	:	在使用SELECT INTO 结构，并且语句返回NULL值的时候；访问嵌套表中已经删除的表或者是访问INDEX BY表（联合数组）中的未初始化元素就会出现该异常');
+WHEN NOT_LOGGED_ON THEN
+dbms_output.put_line('ORA-01012	:	当程序发出数据库调用，但是没有连接的时候（通常，在实际与会话断开连接之后）');
+WHEN PROGRAM_ERROR THEN
+dbms_output.put_line('ORA-06501	:	当Oracle还未正式捕获的错误发生时常会发生，这是因为数据库大量的Object功能而发生');
+WHEN ROWTYPE_MISMATCH THEN
+dbms_output.put_line('ORA-06504	:	如果游标结构不适合PL/SQL游标变量或者是实际的游标参数不同于游标形参的时候发生该异常');
+WHEN SELF_IS_NULL THEN
+dbms_output.put_line('ORA-30625	:	调用一个对象类型非静态成员方法（其中没有初始化对象类型实例）的时候发生该异常');
+WHEN STORAGE_ERROR THEN
+dbms_output.put_line('ORA-06500	:	当内存不够分配SGA的足够配额或者是被破坏的时候，引发该异常');
+WHEN SUBSCRIPT_BEYOND_COUNT THEN
+dbms_output.put_line('ORA-06533	:	当分配给NESTED TABLE或者VARRAY的空间小于使用的下标的时候，发生该异常（类似于java的ArrayIndexOutOfBoundsException）');
+WHEN SUBSCRIPT_OUTSIDE_LIMIT THEN
+dbms_output.put_line('ORA-06532	:	使用非法的索引值来访问NESTED TABLE或者VARRAY的时候引发');
+WHEN SYS_INVALID_ROWID THEN
+dbms_output.put_line('ORA-01410	:	将无效的字符串转化为ROWID的时候引发');
+WHEN TIMEOUT_ON_RESOURCE THEN
+dbms_output.put_line('ORA-00051	:	当数据库不能安全锁定资源的时候引发');
+WHEN TOO_MANY_ROWS THEN
+dbms_output.put_line('ORA-01422	:	常见错误，在使用SELECT INTO 并且查询返回多个行时引发。如果子查询返回多行，而比较运算符为相等的时候也会引发该异常。');
+WHEN USERENV_COMMITSCN_ERROR THEN
+dbms_output.put_line('ORA-01725	:	只可使用函数USERENV('COMMITSCN')作为INSERT语句的VALUES子句中的顶级表达式或者作为UPDATE语句的SET子句中的右操作数');
+WHEN VALUE_ERROR THEN
+dbms_output.put_line('ORA-06502	:	将一个变量赋给另一个不能容纳该变量的变量时引发');
+WHEN ZERO_DIVIDE THEN
+dbms_output.put_line('ORA-01476	:	将某个数字除以0的时候，会发生该异常');
+END;
+```
+
+##### 2.自定义异常：
+
+```sql
+DECLARE
+
+-- 定义异常
+emp EXCEPTION;
+
+BEGIN
+
+-- 抛出自定义异常
+raise emp;
+
+EXCEPTION
+
+-- 捕获自定义的异常
+WHEN emp THEN
+dbms_output.put_line('抛出了emp自定义异常！');
+RAISE_APPLICATION_ERROR(-2001,'出错了！');-- 错误弹框（status状态,message信息，状态一般-2000 ~ -4000 之间，这样不容易和数据库别的状态码造成冲突
+END;
+```
+
+#### 7.Oracle程序包：
+
+**注意事项：创建程序包的声明和主体时不能有	begin	关键字因为程序包是声明函数的语句，但是包内的函数可以有begin关键字，**
+
+**程序包和内部的函数，互不影响**
+
+
+
+##### 7.1声明包
+
+***即定义包的内部规范 (和 Java写接口有类似之处），并创建包***
+
+```sql
+CREATE OR replace package package_1 
+IS
+-- 声明包时不能加 begin 不然就不是声明了，而是执行主体
+PROCEDURE U_1(namd VARCHAR,sk out VARCHAR);
+PROCEDURE U_2(slie INTEGER , klsi out INTEGER);
+function U_3(nme VARCHAR) return VARCHAR2;
+function U_4(ns VARCHAR2) return VARCHAR;
+END package_1;
+```
+
+
+
+##### 7.2创建包的主体
+
+***（即函数和存储过程内部的具体代码的执行内容）***
+
+```sql
+CREATE OR REPLACE 
+package body package_1
+is
+	procedure r1(h1 varchar,h2 out varchar)
+	is
+	begin
+		h2:=h1;
+	end;
+	
+	function t2(h3 varchar) return varchar
+	is
+	begin
+		return h3;
+	end;
+end package_1;
+```
+
+#### 8.触发器
+
+**注意事项：触发器中不能有	is 或 as	关键字，因为触发器不需要传参数**
+
+
+
+**触发器：trigger**
+            **当特定事件发生时  可以自动执行的存储过程**
+作用：1  自动生成数据
+           2  日志信息管理
+           3  复杂的权限管理
+           4  处理复杂的业务逻辑
+分类：
+       **：dml触发器   ：专注于对表记录的增删改**--delete update insert
+                 **--  行级触发器：进行dml时  响应多少航 触发器就触发多少次**
+                 **--  语句级触发器：进行dml时  每个sql语句只触发一次触发器**
+                 --  instead of触发器  ：给视图有关的触发器
+       **：ddl触发器   ：专注于对表结构的增删改** --create drop alter    
+       ：数据库级的触发器：专注于数据库的连接有关的事件
+
+##### 1.dml触发器：
+
+```sql
+-- dml 语句级触发器
+-- 语句级触发器有三个boolean变量：	updating	inserting	  deleting
+create or replace trigger t_1 
+before update or insert or delete on score
+begin
+	if updating then
+	dbms_output.put_line('更新执行了！');
+	elsif	inserting then
+	dbms_output.put_line('添加执行了！');
+	elsif	deleting then
+	dbms_output.put_line('删除执行了！');
+	else
+	dbms_output.put_line('找不到此定义此操作的行为！');
+	end if;
+end;
+
+
+-- dml 行级触发器
+-- sql语句的操作影响了几行，此触发器就执行几次，定义时要在后面加上 for each row 代表行级触发器
+-- 行级触发器也有三个boolean变量：	updating	inserting		deleting
+create or replace trigger t_2
+before update or insert or delete on score for each row 
+begin
+if updating then
+dbms_output.put_line('更新执行了！');
+elsif deleting then
+dbms_output.put_line('删除执行了！');
+elsif inserting then
+dbms_output.put_line('添加执行了！');
+else
+dbms_output.put_line('没有定义此操作行为！');
+end if;
+end;
+```
+
+##### 2.ddl触发器
+
+```sql
+-- ddl触发器没有Boolean值，直接创建，表 create(创建表) ，drop(删除表) , alter(修改表)
+-- RT指的是当前用户，ddl触发器只针对当前用户
+create or replace trigger t_3
+after create on rt
+begin
+dbms_output.put_line('表创建了！');
+end;
+```
+

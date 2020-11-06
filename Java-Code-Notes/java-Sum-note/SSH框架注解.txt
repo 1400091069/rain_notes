@@ -1,0 +1,1206 @@
+# Hibernate框架（原生形式）
+
+## 1.添加依赖
+
+```xml
+<!-- 添加Hibernate依赖 -->
+<dependency>
+    <groupId>org.hibernate</groupId>
+    <artifactId>hibernate-core</artifactId>
+    <version>3.6.10.Final</version>
+</dependency>
+<!-- 添加javassist -->
+<dependency>
+    <groupId>javassist</groupId>
+    <artifactId>javassist</artifactId>
+    <version>3.12.0.GA</version>
+</dependency>
+```
+## 2.配置全局配置文件
+
+1.properties文件形式
+
+```properties
+#指定方言：在包：org.hibernate.dialect
+hibernate.dialect=org.hibernate.dialect.MySQLDialect
+#指定连接数据库的四大参数
+hibernate.connection.driver_class=com.mysql.jdbc.Driver
+hibernate.connection.url=jdbc:mysql://192.168.217.13:3306/mine?serverTimezone=GMT
+hibernate.connection.username=yu
+hibernate.connection.password=123456
+#指定显示sql语句
+hibernate.show_sql=true
+```
+
+2.xml文件形式（hibernate.cfg.xml）固定名字:一般情况下推荐用xml文件，properties文件后续操作有点麻烦
+
+hibernate中内置c3p0连接池，所以只需配置c3p0的参数即可，不配置也可以，c3p0有默认参数配置
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 指定Hibernate配置文件的DTD信息 -->
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+<!-- hibernate- configuration是连接配置文件的根元素 -->
+<hibernate-configuration>
+    <session-factory>
+        <!-- 指定数据库方言 -->
+        <property name="dialect">org.hibernate.dialect.MySQLInnoDBDialect</property>
+        <!-- 指定连接数据库所用的驱动 -->
+        <property name="connection.driver_class">com.mysql.cj.jdbc.Driver</property>
+        <!-- 指定连接数据库的url，hibernate连接的数据库名 -->
+        <property name="connection.url">jdbc:mysql://192.168.217.13/mine?serverTimezone=GMT</property>
+        <!-- 指定连接数据库的用户名 -->
+        <property name="connection.username">yu</property>
+        <!-- 指定连接数据库的密码 -->
+        <property name="connection.password">123456</property>
+        
+        <!-- c3p0的配置 -->
+        <!-- 指定连接池里最大连接数 -->
+        <property name="hibernate.c3p0.max_size">20</property>
+        <!-- 指定连接池里最小连接数 -->
+        <property name="hibernate.c3p0.min_size">1</property>
+        <!-- 指定连接池里连接的超时时长 -->
+        <property name="hibernate.c3p0.timeout">5000</property>
+        <!-- 指定连接池里最大缓存多少个Statement对象 -->
+        <property name="hibernate.c3p0.max_statements">100</property>
+        <property name="hibernate.c3p0.idle_test_period">3000</property>
+        <property name="hibernate.c3p0.acquire_increment">2</property>
+        <property name="hibernate.c3p0.validate">true</property>
+        
+        
+        <!-- 根据需要自动创建数据表 -->
+        <property name="hbm2ddl.auto">update</property>
+        <!-- 显示Hibernate持久化操作所生成的SQL -->
+        <property name="show_sql">true</property>
+        <!-- 将SQL脚本进行格式化后再输出 -->
+        <property name="hibernate.format_sql">true</property>
+        <!-- 罗列所有的映射文件 -->
+        <mapping resource="models/VipUser.hbm.xml"/>
+    </session-factory>
+</hibernate-configuration>
+```
+
+## 3.配置slf4j日志配置文件
+
+1.添加maven依赖：
+
+```xml
+    <!-- slf4j 依赖包 -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.25</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.0-rc1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.0-rc1</version>
+        </dependency>
+```
+2.在src下配置log4j的日志文件，log4j.xml
+
+```properties
+log4j.rootCategory=DEBUG, stdout , R
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=[QC] %p [%t] %C.%M(%L) | %m%n
+log4j.appender.R=org.apache.log4j.DailyRollingFileAppender
+log4j.appender.R.File=D:\\hibernate.log
+log4j.appender.R.layout=org.apache.log4j.PatternLayout
+log4j.appender.R.layout.ConversionPattern=%d-[TS] %p %t %c - %m%n
+log4j.logger.org.hibernate.ps.PreparedStatementCache=WARN
+log4j.logger.org.hibernate=DEBUG
+```
+
+## 4.配置xml映射文件
+
+注意：配置的是model 类的映射文件(即给表的关系类写映射文件，不是给mapper或dao层写映射文件)，配置文件的后缀是双后缀所以必须是：（实体类的类名.hbm.xml）
+
+因为xml是静态资源，在maven项目中xml必须放在resources
+
+```xml
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+    <class table="vipuser" name="models.VipUser">
+        <id name="uid" column="uid">
+            <generator class="native"/>
+        </id>
+        <property name="uname" column="uname"/>
+        <property name="upwd" column="upwd"/>
+        <property name="usex" column="usex"/>
+        <property name="ureal_name" column="ureal_name"/>
+        <property name="uphoto" column="uphoto"/>
+        <property name="uphone" column="uphone"/>
+        <property name="uscore" column="uscore"/>
+        <property name="uenjoy" column="uenjoy"/>
+    </class>
+</hibernate-mapping>
+```
+
+## 5.测试:session(连接对象操作)：
+
+session连接对象能操作简单的dql和dml语句
+
+注意：properties全局配置文件用addClass()方法，xml全局配置文件用configure()方法
+
+```java
+ public static void main(String[] args) {
+//      获取配置对象
+        Configuration configuration = new Configuration();
+     
+//下面的两个方法只能用一个，addClass()用于hibernate.properties全局配置文件，
+//configure()用于hibernate.cfg.xml全局配置文件
+//      在配置对象中加载表的对应关系类,此方法适用于properties的全局配置文件，方法中要写对应类的class
+        configuration.addClass(models.VipUser.class);
+//		加载全局配置文件,此方法只适用于xml的全局配置文件，方法中可写配置文件路径，也可以不行，默认是从src下找全局配置文件
+     	configuration.configure();
+     
+     
+//      获取session数据库连接工厂
+        SessionFactory sessionFactory = configuration.buildSessionFactory();
+//      打开session数据库连接
+        Session session = sessionFactory.openSession();
+//      获取事务
+        Transaction transaction = session.beginTransaction();
+//      进行CRUD
+//      查询
+        VipUser o = (VipUser) session.get(VipUser.class, 8);
+        System.out.println(o);
+//      更新,传入一个对象，此处用查询到的 VipUser 对象代替
+        session.update(o);
+        System.out.println("更新一个");
+//      删除,传入一个对象，此处用查询到的 VipUser 对象代替
+        session.delete(o);
+        System.out.println("删除一个");
+//      添加一个,传入一个对象，此处用查询到的 VipUser 对象代替,返回添加的对象的id值
+        Serializable save = session.save(o);
+        System.out.println("添加成功:   "+save);
+//      提交事务
+        transaction.commit();
+//      关闭session数据库连接
+        session.close();
+    }
+```
+
+## 6.SQLQuery对象，sql语句查询
+
+```java
+    public static void main(String[] args) {
+        Configuration configuration = new Configuration();
+        
+        
+//下面的两个方法只能用一个，addClass()用于hibernate.properties全局配置文件，
+//configure()用于hibernate.cfg.xml全局配置文件
+//      在配置对象中加载表的对应关系类,此方法适用于properties的全局配置文件，方法中要写对应类的class
+        configuration.addClass(models.VipUser.class);
+//		加载全局配置文件,此方法只适用于xml的全局配置文件，方法中可写配置文件路径，也可以不行，默认是从src下找全局配置文件
+     	configuration.configure();
+        
+        
+        
+        SessionFactory sessionFactory = configuration.buildSessionFactory();
+        Session session = sessionFactory.openSession();
+        Transaction transaction = session.beginTransaction();
+//      通过sql语句进行查询
+        SQLQuery sqlQuery = session.createSQLQuery("select * from vipuser");
+//		打印sql语句
+        System.out.println("========    "+sqlQuery.getQueryString()+"    =======");
+//      获取，结果集，集合，集合内部存的是一个个Object类型的数组，每一个数组代表一行数据，即一条记录
+        List list = sqlQuery.list();
+//      获取迭代器
+        Iterator iterator = list.iterator();
+//      通过迭代器遍历集合
+        while (iterator.hasNext()){
+//      把集合内部存的每一条数据强转成Object数组，有利于接收数据
+            Object[] next = (Object[]) iterator.next();
+            System.out.println(next[0]+"    :   "+next[1]);
+        }
+        transaction.commit();
+        session.close();
+    }
+```
+
+## 7.Query，hql 语句单表查询
+
+```java
+public static void main(String[] args) {
+//      获取 hibernate 的配置对象
+        Configuration configuration = new Configuration();
+//      加载 hibernate 的全局配置文件
+        configuration.configure("hibernate.cfg.xml");
+//      构建工厂类
+        SessionFactory sessionFactory = configuration.buildSessionFactory();
+//      打开session数据库连接
+        Session session = sessionFactory.openSession();
+//      获取事务
+        Transaction transaction = session.beginTransaction();
+
+//      DQL操作
+
+//      集合存Object对象接收数据(查询单列时)
+        System.out.println("======集合存Object对象接收数据======");
+        Query query = session.createQuery("select u.uname from models.VipUser u");
+        List<Object> list = query.list();
+        for (int i = 0; i < list.size(); i++) {
+            System.out.println(list.get(i));
+        }
+//      集合存数组接收数据(查询指定列时)
+        System.out.println("======集合存数组接收数据======");
+        Query queryr1 = session.createQuery("select u.uid,u.uname,u.usex from models.VipUser u");
+        List<Object[]> list1 = queryr1.list();
+        for (int i = 0; i < list1.size(); i++) {
+            System.out.println(list1.get(i)[0]);
+        }
+//      集合存对象接收数据(查询所有列时)
+        System.out.println("======集合存对象接收数据======");
+//      hql对独立的 * 号不识别，所以查询所有列时不用写 select * 即可查全部
+        Query query2 = session.createQuery("from models.VipUser u");
+        List<VipUser> list2 = query2.list();
+        for (int i = 0; i < list2.size(); i++) {
+            System.out.println(list2.get(i).getUname());
+        }
+//      map集合接收数据(把字段封装进map)
+        System.out.println("======map集合接收数据======");
+        Query query3 = session.createQuery("select new map (u.uname,u.uid) from models.VipUser u");
+        List<Map> list3 = query3.list();
+        for (int i = 0; i < list3.size(); i++) {
+//           map的key值是数字排列的，所以不能用字段名获取，只能用和下标一样的0，1，2，3，4 。。。来获取对应的字段值
+            System.out.println(list3.get(i).get("0"));
+        }
+//      集合存集合接收数据(把字段封装进list集合中)
+        System.out.println("======集合存集合接收数据======");
+        Query query4 = session.createQuery("select new list(u.uid,u.uname,u.usex) from models.VipUser u");
+        List<List> list4 = query4.list();
+        for (List s: list4) {
+            System.out.println(s.get(0));
+        }
+
+
+//      DML操作
+
+//      更新数据(所有的dml语句的操作都可以，以这样方式写，包括删除数据，添加数据，返回值都是int类型的影响行数)
+        System.out.println("======dml操作，更新指定数据======");
+        Query query5 = session.createQuery("update models.VipUser set uname='你好啊' where uid=12");
+//      执行dml语句返回影响行数
+        int i = query5.executeUpdate();
+        System.out.println(i);
+
+
+//      占位符使用(?)
+        System.out.println("======(?)占位符使用======");
+        Query query6 = session.createQuery("select uname from models.VipUser where uid =?");
+        query6.setInteger(0,12);
+        List<Object> list6 = query6.list();
+        for (int i1 = 0; i1 < list6.size(); i1++) {
+            Object o = list6.get(i1);
+            System.out.println(o);
+        }
+//      占位符使用(:name)
+        System.out.println("======(:名字）占位符使用======");
+        Query query7 = session.createQuery("select uname from models.VipUser where uid =:yu");
+        query7.setInteger("yu",12);
+        List<Object> list7 = query7.list();
+        for (int i1 = 0; i1 < list7.size(); i1++) {
+            Object o = list7.get(i1);
+            System.out.println(o);
+        }
+        transaction.commit();
+        session.close();
+    }
+```
+
+## 8.QBC查询Criteria
+
+参考：https://www.cnblogs.com/lukelook/p/9692429.html
+
+```java
+Criteria criteria = session.createCriteria();
+
+//1 获取所有
+List<Teacher> list11=criteria.list();
+//2 添加条件：　　Restrictions的静态方法
+Criterion cn1=Restrictions.eq("tage",32);//tage=32
+Criterion cn2=Restrictions.ge("tid",1030);//tid>=1030
+Criterion cn12=Restrictions.and(cn1,cn2);
+criteria.add(cn12);
+List<Teacher> list12=criteria.list();
+//3 分页查询   setFirstResult(startIndex)和setMaxResults(pageSize)
+criteria.setFirstResult(3);
+criteria.setMaxResults(3);
+List<Teacher> list13=criteria.list();
+//4 排序     addOrder(Order.asc(xx));addOrder(Order.desc(xxx));
+criteria.addOrder(Order.asc("tage"));
+criteria.addOrder(Order.desc("tsalary"));
+List<Teacher> list14=criteria.list();
+//5 聚合  setProjection(Projections.avg(xxx));
+criteria.setProjection(Projections.avg("tage"));
+double avgTage=(Double)criteria.uniqueResult();
+```
+
+## 9.主键生成策略
+
+hibernate要求实体类必须有一个值唯一的属性作为主键id  必须设置主键生成策略
+
+```xml
+<!--每个class必须指定一个id：主键列：唯一标识-->
+<id name="tid" column="t_id"  type="java.lang.Integer">
+    <generator class="assigned"/>
+</id>
+<id name="tid" column="t_id"  type="java.lang.Integer">
+       <generator class="sequence">
+                <param name="sequence">sequenceName</param>
+       </generator>
+</id>
+```
+
+uuid:  只针对于字符串类型的主键   自动生成32位的16进制字符串
+
+increment：只用于int类型的主键   **hibernate自增**   
+
+identity：只用于int类型的主键 只使用支持auto_increment的数据库   **数据库自增**   
+
+sequence:只用于int类型的主键 只使用支持sequence的数据库 ：oracle
+
+native:  hibernate根据数据库底层来选择
+
+assigned: 客户手动输入(默认)
+
+## 10.检索方式
+
+**检索方式（即查询数据库的方式）**
+
+hibernate 提供了五种 查询数据的方式
+
+#### 一： 对象导航图检索方式
+
+           表关联时： student.teacher.father
+
+#### 二：OID 检索方式
+
+          通过get和load方法由主键id获取对象
+
+####  三：hql检索方式
+
+           通过query接口调用hql语句 获取对象
+
+#### 四：QBC 检索方式
+
+            通过criteria接口获取对象
+
+#### 五：本地sql检索方式
+
+          通过sqlquery接口 通过sql语句获取对象
+
+~~~java
+//1  对象导航图检索方式：：表关联
+//2  OID检索方式：通过get/load方法由id获取对象
+Teacher tea=(Teacher)session.get(Teacher.class,1021);
+//3  HQL检索方式：通过query接口由hql获取对象
+tea=(Teacher)session.createQuery("from com.zhiyou100.entity.Teacher where tid=1031").uniqueResult();
+//4 QBC检索方式：通过criteria接口获取对象
+tea=(Teacher)session.createCriteria(Teacher.class)
+    .add(Restrictions.eq("tid",1041)).uniqueResult();
+//5 本地sql检索方式：
+SQLQuery  sq=session.createSQLQuery("select * from tab_teacher where t_id=1051");
+Object obj=sq.uniqueResult();//获取的是：：object[]
+sq=session.createSQLQuery("update tab_teacher set t_age=t_age+1");
+System.out.println("修改行数："+sqlQuery.executeUpdate());
+~~~
+
+## 11.表与表关联查询
+
+项目中的表关联对象本身就是一个sql语句，所以，在表中加上另一个对象的，集合属性，或对象属性即就是对应的多表查询语句，
+
+调用session连接的，增删改查方法即可进行查询，删除，修改，添加等操作
+
+***注意：多表关联查询只能【两张表的主键】互相进行比较和判断***
+
+示例：
+
+### 主题：简单的对象多表查询
+
+####  1.1 实现一对多双向关联
+
+**老师和学校**
+
+准备表：
+
+~~~sql
+DROP TABLE teacher;
+DROP TABLE school;
+CREATE TABLE school(
+     sc_id INT PRIMARY KEY AUTO_INCREMENT,
+     sc_name VARCHAR(20),
+     sc_address VARCHAR(100)
+);
+INSERT INTO school VALUES(1,'外国语','中原区.桐柏路');
+INSERT INTO school VALUES(2,'郑州一中','中原区.嵩山路');
+CREATE TABLE teacher(
+      t_id VARCHAR(32) PRIMARY KEY ,
+      t_name VARCHAR(20),
+      t_sex CHAR(1),
+      sc_id INT,
+      CONSTRAINT t_s_fk  FOREIGN KEY(sc_id) REFERENCES school(sc_id)
+);
+INSERT INTO teacher VALUES("1001","韩寒",'男',1);
+INSERT INTO teacher VALUES("1002","韩非子",'男',1);
+INSERT INTO teacher VALUES("2001","张三",'男',2);
+INSERT INTO teacher VALUES("2002","张国立",'男',2);
+INSERT INTO teacher VALUES("2003","张三丰",'男',2);
+~~~
+
+实体类：一对多
+
+~~~java
+public class School   implements Serializable{
+    private  Integer scid;
+    private String scname;
+    private  String scaddress;
+    //一个学校有多个老师  定义集合记录其拥有的所有老师
+    private Set<Teacher>  teachers;
+}
+~~~
+
+实体类：多对一
+
+~~~java
+public class Teacher  implements Serializable{
+      private String tid;
+      private  String tname;
+      private  String tsex;
+      //一个老师对应一个学校：在老师中定义school引用来指向其学校
+      private School school
+}
+~~~
+
+映射文件：一对多
+
+~~~xml
+<class table="school" name="School" >
+    <id name="scid" column="sc_id"  type="int">
+        <generator class="assigned"/>
+    </id>
+    <property name="scname" column="sc_name"/>
+    <property name="scaddress" column="sc_address"/>
+    <!--配置属性teachers:-->
+    <!--save-update：级联保存：保存学校时 同时会保存其关联的所有老师-->
+    <!--delete：级联删除：删除学校时 同时会删除其关联的所有老师--> 
+    <!--lazy=false：立即加载-->
+    <set name="teachers" cascade="save-update,delete" lazy="false">
+        <key column="sc_id"/>
+        <one-to-many class="Teacher"/>
+    </set>
+ </class>
+~~~
+
+映射文件：多对一
+
+~~~xml
+ <class table="teacher" name="Teacher" >
+           <id name="tid" column="t_id"  type="string">
+                 <generator class="assigned"/>
+           </id>
+           <property name="tname" column="t_name" type="string"/>
+           <property name="tsex" column="t_sex"  type="string"/>
+           <!--配置属性school：name属性名 class属性类型 column外键列名-->
+           <many-to-one name="school"  class="School" column="sc_id" cascade="save-update"/>
+     </class>
+~~~
+
+测试查询学校：
+
+~~~java
+List<School> schoolList=session.createCriteria(School.class).list();
+~~~
+
+查询学校的结果
+
+~~~sql
+Hibernate: select this_.sc_id as sc1_0_0_, this_.sc_name as sc2_0_0_, this_.sc_address as sc3_0_0_ from school this_
+Hibernate: select teachers0_.sc_id as sc4_1_, teachers0_.t_id as t1_1_, teachers0_.t_id as t1_1_0_, teachers0_.t_name as t2_1_0_, teachers0_.t_sex as t3_1_0_, teachers0_.sc_id as sc4_1_0_ from teacher teachers0_ where teachers0_.sc_id=?
+Hibernate: select teachers0_.sc_id as sc4_1_, teachers0_.t_id as t1_1_, teachers0_.t_id as t1_1_0_, teachers0_.t_name as t2_1_0_, teachers0_.t_sex as t3_1_0_, teachers0_.sc_id as sc4_1_0_ from teacher teachers0_ where teachers0_.sc_id=?
+Hibernate: select teachers0_.sc_id as sc4_1_, teachers0_.t_id as t1_1_, teachers0_.t_id as t1_1_0_, teachers0_.t_name as t2_1_0_, teachers0_.t_sex as t3_1_0_, teachers0_.sc_id as sc4_1_0_ from teacher teachers0_ where teachers0_.sc_id=?
+~~~
+
+测试添加学校
+
+~~~java
+School s=new School();
+s.setScname("郸城一中"); s.setScname("周口.郸城");s.setScid(10);
+Teacher t11=new Teacher(); t11.setTname("高老师1"); t11.setTsex("男");t11.setTid("tid_1");
+Teacher t12=new Teacher(); t12.setTname("高老师2"); t12.setTsex("男");t12.setTid("tid_2");
+Teacher t13=new Teacher(); t13.setTname("高老师3"); t13.setTsex("男");t13.setTid("tid_3");
+Set<Teacher> set=new HashSet<>();set.add(t11);set.add(t12);set.add(t13);
+s.setTeachers(set);
+//在school中设置cascade=save-update在保存school时会同时保存其关联的teacher
+session.save(s);
+~~~
+
+添加学校的结果
+
+~~~sql
+Hibernate: select teacher_.t_id, teacher_.t_name as t2_1_, teacher_.t_sex as t3_1_, teacher_.sc_id as sc4_1_ from teacher teacher_ where teacher_.t_id=?
+Hibernate: select teacher_.t_id, teacher_.t_name as t2_1_, teacher_.t_sex as t3_1_, teacher_.sc_id as sc4_1_ from teacher teacher_ where teacher_.t_id=?
+Hibernate: select teacher_.t_id, teacher_.t_name as t2_1_, teacher_.t_sex as t3_1_, teacher_.sc_id as sc4_1_ from teacher teacher_ where teacher_.t_id=?
+Hibernate: insert into school (sc_name, sc_address, sc_id) values (?, ?, ?)
+Hibernate: insert into teacher (t_name, t_sex, sc_id, t_id) values (?, ?, ?, ?)
+Hibernate: insert into teacher (t_name, t_sex, sc_id, t_id) values (?, ?, ?, ?)
+Hibernate: insert into teacher (t_name, t_sex, sc_id, t_id) values (?, ?, ?, ?)
+Hibernate: update teacher set sc_id=? where t_id=?
+Hibernate: update teacher set sc_id=? where t_id=?
+Hibernate: update teacher set sc_id=? where t_id=?
+~~~
+
+测试删除学校
+
+~~~java
+School school=(School)session.get(School.class,10);
+session.delete(school);
+~~~
+
+删除学校结果
+
+~~~sql
+Hibernate: select school0_.sc_id as sc1_0_0_, school0_.sc_name as sc2_0_0_, school0_.sc_address as sc3_0_0_ from school school0_ where school0_.sc_id=?
+Hibernate: select teachers0_.sc_id as sc4_1_, teachers0_.t_id as t1_1_, teachers0_.t_id as t1_1_0_, teachers0_.t_name as t2_1_0_, teachers0_.t_sex as t3_1_0_, teachers0_.sc_id as sc4_1_0_ from teacher teachers0_ where teachers0_.sc_id=?
+Hibernate: update teacher set sc_id=null where sc_id=?
+Hibernate: delete from teacher where t_id=?
+Hibernate: delete from teacher where t_id=?
+Hibernate: delete from teacher where t_id=?
+Hibernate: delete from school where sc_id=?
+
+~~~
+
+#### 1.2 一对一双向关联
+
+创建表
+
+~~~sql
+CREATE TABLE hasband(
+    hid INT PRIMARY KEY,
+    hname VARCHAR(11)
+);
+INSERT INTO hasband VALUES(1,'老张');
+INSERT INTO hasband VALUES(2,'老刘');
+CREATE TABLE wife(
+    wid INT PRIMARY KEY,
+    wname VARCHAR(11),
+    CONSTRAINT w_h_fk  FOREIGN KEY(wid) REFERENCES hasband(hid)
+);
+INSERT INTO wife VALUES(1,'老张媳妇');
+INSERT INTO wife VALUES(2,'老刘媳妇');
+SELECT * FROM wife;
+SELECT * FROM hasband;
+~~~
+
+创建实体类
+
+~~~java
+public class Hasband   implements Serializable{
+    private Integer hid;
+    private String  hname;
+    private Wife wife;
+}
+public class Wife   implements Serializable{
+    private  Integer wid;
+    private  String wname;
+    private  Hasband hasband;
+}
+~~~
+
+映射文件
+
+~~~xml
+Hasband.hbm.xml
+<class table="hasband" name="Hasband" >
+           <id name="hid" column="hid"  type="int">
+                 <generator class="assigned"/>
+           </id>
+           <property name="hname" column="hname" type="string"/>
+           <!--配置属性wife:  cascade=all级联删除修改和添加-->
+           <one-to-one name="wife" class="Wife"  cascade="all"/>
+</class>
+Wife.hbm.xml
+<class table="wife" name="Wife" >
+    <id name="wid" column="wid"  type="int">
+        <!---1对1的从表的主键生成策略是foreign 从表的主键取值取决于主表的主键-->
+        <generator class="foreign">
+            <!--取决于hasband属性的主键的值-->
+            <param name="property">hasband</param>
+        </generator>
+    </id>
+    <property name="wname" column="wname" type="string"/>
+    <!--配置属性hasband-->
+    <!--constrained="true"参考：https://www.cnblogs.com/hihtml5/p/6378339.html?utm_source=itdadao&utm_medium=referral
+    -->
+    <one-to-one name="hasband" class="Hasband"  constrained="true"/>
+</class>
+~~~
+
+测试查询代码
+
+~~~java
+//获取一个：
+Hasband h=(Hasband)session.get(Hasband.class,5);
+System.out.println(h+"::"+h.getWife());
+Wife  w=(Wife)session.get(Wife.class,2);
+System.out.println(w+"::"+w.getHasband());
+~~~
+
+查询结果
+
+~~~sql
+Hibernate: select hasband0_.hid as hid2_1_, hasband0_.hname as hname2_1_, wife1_.wid as wid3_0_, wife1_.wname as wname3_0_ from hasband hasband0_ left outer join wife wife1_ on hasband0_.hid=wife1_.wid where hasband0_.hid=?
+Hasband{hid=5, hname='老王'}::Wife{wid=5, wname='老王媳妇'}
+Hibernate: select wife0_.wid as wid3_0_, wife0_.wname as wname3_0_ from wife wife0_ where wife0_.wid=?
+Hibernate: select hasband0_.hid as hid2_1_, hasband0_.hname as hname2_1_, wife1_.wid as wid3_0_, wife1_.wname as wname3_0_ from hasband hasband0_ left outer join wife wife1_ on hasband0_.hid=wife1_.wid where hasband0_.hid=?
+Wife{wid=2, wname='老刘媳妇'}::Hasband{hid=2, hname='老刘'}
+~~~
+
+测试添加代码
+
+~~~java
+//添加一个
+Hasband h2=new Hasband();h2.setHid(6);h2.setHname("老高");
+Wife w2=new Wife();w2.setWname("老高媳妇"); w2.setHasband(h2);
+h2.setWife(w2);
+session.save(h2);
+~~~
+
+添加结果
+
+~~~sql
+Hibernate: insert into hasband (hname, hid) values (?, ?)
+Hibernate: insert into wife (wname, wid) values (?, ?)
+~~~
+
+测试删除代码
+
+~~~java
+//删除
+Hasband h2=(Hasband)session.get(Hasband.class,6);
+session.delete(h2);
+~~~
+
+删除结果
+
+~~~sql
+Hibernate: select hasband0_.hid as hid2_1_, hasband0_.hname as hname2_1_, wife1_.wid as wid3_0_, wife1_.wname as wname3_0_ from hasband hasband0_ left outer join wife wife1_ on hasband0_.hid=wife1_.wid where hasband0_.hid=?
+Hibernate: delete from wife where wid=?
+Hibernate: delete from hasband where hid=?
+~~~
+
+#### 1.3 多对多双向关联
+
+创建表
+
+~~~sql
+DROP TABLE student;
+CREATE TABLE student(
+    sid INT PRIMARY KEY AUTO_INCREMENT,
+    sname VARCHAR(20)
+);
+INSERT INTO student VALUES(1001,"张三");
+INSERT INTO student VALUES(1002,"李四");
+INSERT INTO student VALUES(1003,"王五");
+DROP TABLE  kecheng;
+CREATE TABLE kecheng(
+    kid INT PRIMARY KEY AUTO_INCREMENT,
+    kname VARCHAR(20)
+);
+INSERT INTO kecheng VALUES(1,"语文");
+INSERT INTO kecheng VALUES(2,"数学");
+INSERT INTO kecheng VALUES(3,"英语");
+DROP TABLE guanxi;
+CREATE TABLE guanxi(
+    gx_sid INT,gx_kid INT, PRIMARY KEY(gx_kid,gx_sid),
+    CONSTRAINT fk_student FOREIGN KEY(gx_sid) REFERENCES student(sid),
+    CONSTRAINT fk_kecheng FOREIGN KEY(gx_kid) REFERENCES kecheng(kid)
+);
+INSERT INTO guanxi VALUES(1001,1),(1001,2),(1001,3);
+INSERT INTO guanxi VALUES(1002,1),(1002,2),(1002,3);
+INSERT INTO guanxi VALUES(1003,1),(1003,2),(1003,3);
+~~~
+
+创建实体类：不需要创建关系表对应的实体类
+
+~~~java
+public class Student implements Serializable{
+    private Integer sid;
+    private String sname;
+    private Set<KeCheng>  keChengSet;
+}
+public class KeCheng   implements Serializable{
+    private Integer kid;
+    private String kname;
+    private Set<Student> studentSet;
+}
+~~~
+
+创建实体类的映射文件
+
+~~~xml
+Student.hbm.xml
+ <class table="student" name="Student" >
+     <id name="sid" column="sid"  type="int">
+         <generator class="assigned"/>
+     </id>
+     <property name="sname" column="sname" type="string"/>
+     <!--配置属性keChengSet-->
+     <set name="keChengSet" table="guanxi">
+         <key column="gx_sid"/><!--关系表中本表的外键列名-->
+         <many-to-many column="gx_kid"  class="KeCheng"/>
+     </set>
+</class>
+KeCheng.hbm.xml
+  <class table="kecheng" name="KeCheng" >
+           <id name="kid" column="kid"  type="int">
+                 <generator class="assigned"/>
+           </id>
+           <property name="kname" column="kname" type="string"/>
+           <!--配置属性keChengSet-->
+           <set name="studentSet" table="guanxi">
+               <key column="gx_kid"></key>
+               <many-to-many column="gx_sid"  class="Student"/>
+           </set>
+     </class>
+~~~
+
+测试获取的代码
+
+~~~java
+ //获取一个
+Student s=(Student)session.get(Student.class,1002);
+System.out.println(s+":::"+s.getKeChengSet());
+~~~
+
+获取结果
+
+~~~sql
+Hibernate: select student0_.sid as sid4_0_, student0_.sname as sname4_0_ from student student0_ where student0_.sid=?
+Hibernate: select kechengset0_.gx_sid as gx1_1_, kechengset0_.gx_kid as gx2_1_, kecheng1_.kid as kid6_0_, kecheng1_.kname as kname6_0_ from guanxi kechengset0_ left outer join kecheng kecheng1_ on kechengset0_.gx_kid=kecheng1_.kid where kechengset0_.gx_sid=?
+~~~
+
+测试添加的代码
+
+~~~java
+//添加一个
+Student s1=new Student();s1.setSname("新来的");s1.setSid(2006);
+KeCheng k1=new KeCheng();k1.setKid(1);k1.setKname("语文");
+KeCheng k2=new KeCheng();k2.setKid(2);k2.setKname("数学");
+Set<KeCheng> set=new HashSet<>();set.add(k1);set.add(k2);
+s1.setKeChengSet(set);
+session.save(s1);
+~~~
+
+添加结果
+
+~~~sql
+Hibernate: select student0_.sid as sid4_0_, student0_.sname as sname4_0_ from student student0_ where student0_.sid=?
+Hibernate: select kechengset0_.gx_sid as gx1_1_, kechengset0_.gx_kid as gx2_1_, kecheng1_.kid as kid6_0_, kecheng1_.kname as kname6_0_ from guanxi kechengset0_ left outer join kecheng kecheng1_ on kechengset0_.gx_kid=kecheng1_.kid where kechengset0_.gx_sid=?
+Student{sid=1002, sname='李四先生_}:::[KeCheng{kid=1, kname='语文'}, KeCheng{kid=3, kname='英语'}, KeCheng{kid=2, kname='数学'}]
+Hibernate: insert into student (sname, sid) values (?, ?)
+Hibernate: insert into guanxi (gx_sid, gx_kid) values (?, ?)
+Hibernate: insert into guanxi (gx_sid, gx_kid) values (?, ?)
+~~~
+
+测试删除的代码
+
+~~~java
+//删除一个
+Student s=(Student)session.get(Student.class,1006);
+session.delete(s);
+~~~
+
+删除结果
+
+~~~sql
+Hibernate: select student0_.sid as sid4_0_, student0_.sname as sname4_0_ from student student0_ where student0_.sid=?
+Hibernate: delete from guanxi where gx_sid=?
+Hibernate: delete from student where sid=?
+~~~
+
+## 12.多表查询
+
+利用createSQLQuery("sql语句");	此方法相当于原生的jdbc可以自己写sql语句，并封装数据
+
+返回值是Object[ ] 类型的数据通过下标取值
+
+## 13.hibarnate对象的状态
+
+三种状态：
+
+​					1.瞬时状态
+
+​					2.持久状态
+
+​					3.游离状态
+
+```java
+//hibernate对象状态：瞬时状态：通过new创建的对象 并且和session没有任何关联
+Student s1=new Student();
+s1.setSid(1005); s1.setSname("啊哈哈");//此时的s1是瞬时状态的对象
+//hibernate对象状态：持久状态：通过session方法获取或者调用的对象
+//持久状态的对象与数据库中某行记录建立的绑定关系  此对象会托管给session
+//在事务提交前 会判断持久状态对象和其关联的行是否一致  不一致就执行update
+//session.saveOrUpdate(s1);//此时的s1是持久状态的对象
+//s1.setSname("哈哈");
+//s1.setSname("嘿嘿");
+s1=(Student)session.get(Student.class,1005);
+s1.setSname("大哥");
+transaction.commit();//事务提交
+session.close();//关闭session
+//hibernate对象状态：游离状态：session关闭后 游离状态的对象将变成游离状态
+System.out.println(s1);//此时的s1是游离状态的对象
+s1.setSname("111");
+```
+
+## 14.hibernate的一级二级缓存
+
+注意：hibernate默认会先找一级缓存，再找二级缓存
+
+### 一：一级缓存：
+
+（默认） session级别，不用配置
+
+### 二：二级缓存：
+
+需要手动打开，sessionFactory级别
+
+1.导入依赖
+
+```xml
+<dependency>
+     <groupId>org.hibernate</groupId>
+     <artifactId>hibernate-ehcache</artifactId>
+     <version>5.3.7.Final</version>
+</dependency>
+```
+
+2.创建ehcache.xml文件，配置二级缓存所需要的基本参数，位置是在src下
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<ehcache>
+    <defaultCache
+            maxElementsInMemory="10000"
+            eternal="false"
+            timeToIdleSeconds="120"
+            timeToLiveSeconds="120"
+            overflowToDisk="true"
+            diskPersistent="false"
+            diskExpiryThreadIntervalSeconds="120"
+            memoryStoreEvictionPolicy="LRU"
+    />
+    <!--
+     maxElementsInMemory:缓存最大数目
+     eternal:对象是否永久有效，一但设置了，timeout将不起作用。
+     overflowToDisk:是否保存到磁盘，当系统当机时
+     timeToIdleSeconds:设置对象在失效前的允许闲置时间（单位：秒）。仅当eternal=false对象不是永久有效时使用，可选属性，默认值是0，也就是可闲置时间无穷大。
+     timeToLiveSeconds:设置对象在失效前允许存活时间（单位：秒）。最大时间介于创建时间和失效时间之间。仅当eternal=false对象不是永久有效时使用，默认是0.，也就是对象存活时间无穷大。
+     diskPersistent：是否缓存虚拟机重启期数据 Whether the disk store persists between restarts of the Virtual Machine. The default value is false.
+     diskSpoolBufferSizeMB：这个参数设置DiskStore（磁盘缓存）的缓存区大小。默认是30MB。每个Cache都应该有自己的一个缓冲区。
+     diskExpiryThreadIntervalSeconds：磁盘失效线程运行时间间隔，默认是120秒。
+     memoryStoreEvictionPolicy：当达到maxElementsInMemory限制时，Ehcache将会根据指定的策略去清理内存。默认策略是LRU（最近最少使用）。你可以设置为FIFO（先进先出）或是LFU（较少使用）。
+     clearOnFlush：内存数量最大时是否清除。
+     memoryStoreEvictionPolicy:可选策略有：LRU（最近最少使用，默认策略）、FIFO（先进先出）、LFU（最少访问次数）。
+     FIFO，first in first out，这个是大家最熟的，先进先出。
+     LFU， Less Frequently Used，就是上面例子中使用的策略，直白一点就是讲一直以来最少被使用的。如上面所讲，缓存的元素有一个hit属性，hit值最小的将会被清出缓存。
+     LRU，Least Recently Used，最近最少使用的，缓存的元素有一个时间戳，当缓存容量满了，而又需要腾出地方来缓存新的元素的时候，那么现有缓存元素中时间戳离当前时间最远的元素将被清出缓存。
+  -->
+</ehcache>
+```
+
+3.在全局配置文件中添加开启二级缓存的配置
+
+```xml
+<hibernate-configuration>
+    <session-factory>
+        <!--开启二级缓存-->
+        <property name="cache.use_second_level_cache">true</property>
+        <!--指定二级缓存提供的供应商,新版本事net.sf包下，老版本是在org.hibernate包下的-->
+        <property name="cache.provider_class">net.sf.ehcache.hibernate.EhCacheProvider</property>
+        
+        <!--默认只有get load iterator可以使用二级缓存，指定query和criteria也可以使用二级缓存，
+        但在java代码中调用query对象和criteria对象时要调用方法 setCacheable(true) 才能真正使用
+		二级缓存，此标签只能在扫描前添加，不然会报错。
+		Query query = session.createQuery("").setCacheable(true);
+		-->
+        
+        <property name="cache.use_query_cache">true</property>
+        
+        <!-- 扫描映射文件 ，只有扫描后才能，声明使用二级缓存的类-->
+        <mapping package="models"/>
+        <!--声明能使用二级缓存的类-->
+        <class-cache class="models.Teacher" usage="read-only"/>
+    </session-factory>
+</hibernate-configuration>
+```
+
+4.二级缓存已经开启  默认只有get load iterator可以使用二级缓存， 指定query和criteria也可以使用二级缓存
+
+```xml
+<!--默认只有get load iterator可以使用二级缓存，指定query和criteria也可以使用二级缓存，
+    但在java代码中调用query对象和criteria对象时要调用方法 setCacheable(true) 才能真正使用
+    二级缓存，此标签只能在扫描前添加，不然会报错-->
+<property name="cache.use_query_cache">true</property>
+```
+
+# Hibernate框架（注解形式）
+
+## 一：基本步骤
+
+### 1.添加依赖
+
+```xml
+<!-- 添加Hibernate依赖 -->
+<dependency>
+  <groupId>org.hibernate</groupId>
+  <artifactId>hibernate-core</artifactId>
+  <version>5.3.7.Final</version>
+</dependency>
+<!-- 添加javassist -->
+<dependency>
+  <groupId>javassist</groupId>
+  <artifactId>javassist</artifactId>
+  <version>3.12.0.GA</version>
+</dependency>
+
+<dependency>
+  <groupId>org.hibernate</groupId>
+  <artifactId>hibernate-ehcache</artifactId>
+  <version>5.3.7.Final</version>
+</dependency>
+<!-- slf4j 依赖包 -->
+<dependency>
+  <groupId>org.slf4j</groupId>
+  <artifactId>slf4j-api</artifactId>
+  <version>1.7.25</version>
+</dependency>
+<dependency>
+  <groupId>org.slf4j</groupId>
+  <artifactId>slf4j-log4j12</artifactId>
+  <version>1.7.5</version>
+</dependency>
+<dependency>
+  <groupId>org.apache.logging.log4j</groupId>
+  <artifactId>log4j-api</artifactId>
+  <version>2.0-rc1</version>
+</dependency>
+<dependency>
+  <groupId>org.apache.logging.log4j</groupId>
+  <artifactId>log4j-core</artifactId>
+  <version>2.0-rc1</version>
+</dependency>
+<!-- c3p0的包-->
+<dependency>
+  <groupId>c3p0</groupId>
+  <artifactId>c3p0</artifactId>
+  <version>${c3p0.version}</version>
+</dependency>
+<!-- mysql驱动包 -->
+<dependency>
+  <groupId>mysql</groupId>
+  <artifactId>mysql-connector-java</artifactId>
+  <version>${mybatis.version}</version>
+</dependency>
+<!--关于SpringMVC的包-->
+
+<!--springmvc文件上传下载依赖-->
+<dependency>
+  <groupId>commons-fileupload</groupId>
+  <artifactId>commons-fileupload</artifactId>
+  <version>1.3.2</version>
+</dependency>
+<!--  关于json的包 ，返回json数据要用 -->
+<dependency>
+  <groupId>com.fasterxml.jackson.core</groupId>
+  <artifactId>jackson-databind</artifactId>
+  <version>${jackson.version}</version>
+</dependency>
+<!--Spring-->
+<dependency>
+  <groupId>org.springframework</groupId>
+  <artifactId>spring-context</artifactId>
+  <version>${springmvc.version}</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework</groupId>
+  <artifactId>spring-orm</artifactId>
+  <version>${springmvc.version}</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework</groupId>
+  <artifactId>spring-oxm</artifactId>
+  <version>${springmvc.version}</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework</groupId>
+  <artifactId>spring-jdbc</artifactId>
+  <version>${springmvc.version}</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework</groupId>
+  <artifactId>spring-tx</artifactId>
+  <version>${springmvc.version}</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework</groupId>
+  <artifactId>spring-web</artifactId>
+  <version>${springmvc.version}</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework</groupId>
+  <artifactId>spring-webmvc</artifactId>
+  <version>${springmvc.version}</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework</groupId>
+  <artifactId>spring-aop</artifactId>
+  <version>${springmvc.version}</version>
+</dependency>
+<dependency>
+  <groupId>org.springframework</groupId>
+  <artifactId>spring-test</artifactId>
+  <version>${springmvc.version}</version>
+</dependency>
+```
+
+### 2.配置全局配置文件
+
+***同上（原生形式）***
+
+***(和上方原生形式的配置一样)***
+
+### 3.配置log4j日志文件
+
+***同上（原生形式）***
+
+***(和上方原生形式的配置一样)***
+
+## 二：在类上写相应的注解
+
+|     注解名      |             注解参数             | 注解位置 | 注解说明                                           |
+| :-------------: | :------------------------------: | -------- | -------------------------------------------------- |
+|     @Entity     |                无                | 类上     | 声明这是一个数据库的实体类                         |
+|     @Table      |           name="表名"            | 类上     | 此类对应的表                                       |
+|       @Id       |                无                | 属性上   | 声明这个属性是主键列                               |
+|     @Column     |         name="表的列名"          | 属性上   | 此属性对应表的列名                                 |
+| @GeneratedValue | strategy=GenerationType.IDENTITY | 属性上   | 主键自增策略，主要写在id主键的属性上               |
+|   @ManyToOne    |                                  | 属性上   | 多对一                                             |
+|   @OneToMany    |                                  | 属性上   | 一对多                                             |
+|   @ManyToMany   |                                  | 属性上   | 多对多                                             |
+|    @OneToOne    |                                  | 属性上   | 一对一                                             |
+|    @Cascade     |                                  | 级联     | 此属性代表的类或接口中的类也会做相同的dml和dql操作 |
+
+示例：
+
+```java
+@Entity	//声明此类是数据库的实体类
+@Table(name = "teacher")	//此类代表数据库中的表的名字
+public class Teacher implements Serializable {
+    @Id         //声明此属性是id主键列
+    @Column(name = "t_id")  //此属性在表中的列名
+    @GeneratedValue(strategy = GenerationType.IDENTITY) //主键的生成策略
+    private String t_id;
+    @Column(name = "t_name")    //此属性在表中的列名
+    private String t_name;
+    @Column(name = "t_sex")
+    private String t_sex;
+    @Column(name = "sc_id")
+    private Integer sc_id;
+    @ManyToOne
+    @OneToMany
+    @ManyToMany
+    @OneToOne
+    @Cascade
+    private School school;
+```
+
+## 三：进行代码测试：
+
+5.进行查询：
+
+```java
+    public static void main(String[] args) {
+        Configuration configuration = new Configuration();
+        configuration.configure("hibernate.cfg.xml");
+        SessionFactory sessionFactory = configuration.buildSessionFactory();
+        Session session = sessionFactory.openSession();
+        Transaction transaction = session.beginTransaction();
+        Teacher teacher = (Teacher) session.get(Teacher.class, "1001");
+        System.out.println("========="+teacher+"=========");
+        School school = (School) session.get(School.class, 1);
+        System.out.println("========="+school+"==========");
+        transaction.commit();
+        session.close();
+    }
+```
+
+## 四：Spring整合hibernate：
+
+注意：整合的hibernate的依赖版本不能太低，版本要一致，推荐要	（5.3.7.Final）	版本的依赖
+
+```xml
+<!--创建数据源-->
+<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+    <property name="driverClass" value="com.mysql.cj.jdbc.Driver"/>
+    <property name="jdbcUrl" value="jdbc:mysql://192.168.217.13:3306/test?serverTimezone=GMT"/>
+    <property name="user" value="yu"/>
+    <property name="password" value="123456"/>
+</bean>
+<!--创建sessionFactory,配置加载连接工厂-->
+<bean id="sessionFactory" class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+    <!--传入数据源-->
+    <property name="dataSource" ref="dataSource"/>
+    <!--hibernate的配置参数，也可以写<property name="configLocation" value="hibernate.cfg.xml"/>
+    标签，加载hibernate的全局配置文件，两种方式都可以使用-->
+    <property name="configLocation" value="hibernate.cfg.xml"/>
+    <property name="hibernateProperties">
+        <props>
+            <prop key="hibernate.dialect">org.hibernate.dialect.MySQL5Dialect</prop>
+            <prop key="hibernate.hbm2ddl.auto">update</prop>
+            <prop key="hibernate.format_sql">true</prop>
+            <prop key="hibernate.show_sql">true</prop>
+        </props>
+    </property>
+    <!--扫描映射文件的包，注解形式也可以扫描-->
+    <property name="packagesToScan" value="models"/>
+</bean>
+<!--配置hibernate事务管理器-->
+<bean id="hibernateTransactionManager" class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+    <property name="sessionFactory" ref="sessionFactory"/>
+</bean>
+```
+
+### hibernate整合测试：
+
+```java
+@Service
+public class Dome01 {
+//	在业务层直接调用连接工厂，然后打开连接调用相对应的方法即可使用
+    @Resource(name = "sessionFactory")
+    SessionFactory sessionFactory;
+
+    public Teacher Test01(){
+        Session session = sessionFactory.openSession();
+        return session.get(Teacher.class, "1001");
+    }
+}
+```
+

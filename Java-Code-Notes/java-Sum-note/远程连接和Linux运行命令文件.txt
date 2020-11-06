@@ -1,0 +1,51 @@
+VMware中网络信息不可用:
+原因:VMware网络服务未打开
+解决办法:打开VMware的网络服务
+BUG:无法打开VMware的网络服务
+解决办法:编辑-->虚拟网络编辑器-->还原默认设置
+
+
+1.远程连接VMware中的Linux系统:
+
+网络改为"桥接模式",连接即可!
+
+
+
+2.VMware中docker的mysql容器连接:
+
+<1>,容器中登录mysql,查看mysql的版本
+mysql> status;
+--------------
+mysql  Ver 8.0.11 for Linux on x86_64 (MySQL Community Server - GPL)
+ 
+<2>,进行授权远程连接(注意mysql 8.0跟之前的授权方式不同)授权
+
+GRANT ALL ON *.* TO 'root'@'%';
+
+<3>.刷新权限 : flush privileges;
+此时,还不能远程访问,因为Navicat只支持旧版本的加密,需要更改mysql的加密规则
+<4>.更改加密规则 :
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'password' PASSWORD EXPIRE NEVER;
+<5>.更新root用户密码 : 
+ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY '123456';
+<6>.刷新权限 :
+flush privileges;
+<7>.重新启动MySQL容器即可 ! 
+
+
+
+
+Linux:运行命令文件=shell脚本:
+1.编写 :
+<1>文件的第一行必须是:	#! /bin/bash	//意思是，该文件使用的是bash语法。如果不设置该行，那么你的shell脚本就不能被执行
+	[一行只能写一个命令,不能一行写多个命令]
+2.Linux基本命令:
+##	注释		#代表注释,一般在脚本开头写脚本的作用以及创建日期
+data			#打印系统日期
+echo "要打印的字符串"	#打印字符串
+i=10			#可以直接定义变量
+$((2*3))			#在$双括号中可以进行运算
+${i}			#取出变量值
+3.运行 :
+chmod -x 文件名	//必须给文件可执行权限才能运行    
+sh 文件名 		//此命令用于运行后缀为sh的命令文件

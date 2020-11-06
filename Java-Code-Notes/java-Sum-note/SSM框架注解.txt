@@ -1,0 +1,1040 @@
+# mybatis:
+
+*注解版mybatis : 使用注解版就不用再写mapper的映射文件*
+
+#### 1.全局配置
+
+***在Resources下配置全局配置文件***
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration
+PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+<settings>
+ <!-- 开启驼峰命名，数据库字段中的 “_” 后面的字母变成大写并去掉字段中的 “_” -->   
+<setting name="mapUnderscoreToCamelCase" value="true"/>    
+<!-- 开启log4j日志，并打印sql语句 -->
+<setting name="logImpl" value="STDOUT_LOGGING" />
+</settings>
+<!-- 数据库环境 -->
+<environments default="development">
+<environment id="development">
+<!-- 事务管理器 -->
+<transactionManager type="JDBC" />
+<!-- 使用连接池 -->
+<dataSource type="POOLED">
+<!-- 数据库配置 -->
+<property name="driver" value="com.mysql.jdbc.Driver" />
+<property name="url" value="jdbc:mysql://localhost:3306/day19" />
+<property name="username" value="root" />
+<property name="password" value="123456" />
+</dataSource>
+</environment>
+</environments>
+<!-- 加载映射文件 -->
+<mappers>
+<package name="mapper"/>
+</mappers>
+</configuration>
+```
+
+[在全局配置文件中，找mapper就等于扫描注解，没有Xxxmapper.xml文件，路径直接找相应的接口即可扫描接口上的注解](https://blog.csdn.net/qq_34721292/article/details/89883408)
+
+**注意**：根据mysql的驱动包的版本，driver的路径也不一样，
+
+高版本的的驱动路径：示例：com.mysql.cj.jdbc.Driver ，中间多个cj目录
+
+高版本的驱动包还要加时区：
+
+所以，url的路径也要变：示例：jdbc:mysql://192.168.217.13:3306/rain?serverTimezone=GMT
+
+后面加个serverTimezone=GMT 或 UTC 代表相应的时区
+
+GMT :中国的时区
+
+UTC  :格林尼治时区
+
+#### 2.注解
+
+***注解会自动返回数据，不用写返回的数据类型，如果要指定返回值类型可以写下方的@Results注解***
+
+@Select(“写sql语句”)
+
+@Delete(“写sql语句”)
+
+@Updata(“写sql语句”)
+
+@Insert(“写sql语句”)
+
+@Results(id=”给这个注解代码设置的名字，别的代码可以通过id名直接调用提高复用性”,
+
+​           value={ @Result(column=”列名”,property=”属性名”)， //相当于Mapper中的ResultMap属性
+
+​                @Result(column=”列名”,property=”属性名”)，
+
+​                @Result(column=”列名”,property=”属性名”)})
+
+注解版动态sql: 需要在大括号中写标签，sql语句要写在<script>标签中，然后用各种各样的判断标签进行判断即可
+
+注解版动态sql示例：@Select({"<script> " +
+
+​    "select * from t_user " +
+
+​    "where 1=1 " +
+
+​    "<if test='userId!=null'> and id = #{userId}</if> " +
+
+​    "</script>"})
+
+***MyBatis注解接收参数和非注解版一样，直接在sql语句中写#{}或${}把值取出即可***
+
+#### 3.Java代码：
+
+//1. 加载Mybatis全局配置文件
+
+​           Stringresource="mybatis-config.xml";
+
+​           InputStream inputStream=Resources.getResourceAsStream(resource);
+
+​           //2. 通过全局配置文件得到SqlSessionFactory
+
+​           SqlSessionFactory sqlSessionFactory=newSqlSessionFactoryBuilder().build(inputStream);
+
+​           //3. 通过SqlSessionFactory得到SqlSession
+
+​           SqlSessionsqlSession=sqlSessionFactory.openSession();
+
+​           //4. 通过SqlSession得到Mapper代理对象
+
+​           UserMapper userMapper=sqlSession.getMapper(UserMapper.class);
+
+​           //5. 通过代理对象执行sql
+
+​           List<User>users=userMapper.findAllUser();
+
+​           for(Useruser:users){
+
+​           System.out.println(user);
+
+​           } 
+
+#### 4.mybatis的PageHelper插件：
+
+1.在mybatis的全局配置文件中配置：
+
+```xml
+<!--设置mybatis的par分页插件，配置-->
+<plugins>
+    <plugin interceptor="com.github.pagehelper.PageInterceptor">
+        <property name="reasonable" value="true"/>
+    </plugin>
+</plugins>
+```
+
+在业务层创建 Pageinfo 对象，传入sql语句查询的全部数据，即 传入list集合的数据：
+
+示例：返回 Pageinfo 对象后就可以使用 Pageinfo对象中，计算过后的分页数据了
+
+```java
+    //从spring容器中自动注入 workerMapper 接口的实现类对象
+	@Resource(name = "workerMapper")
+    WorkerMapper workerMapper;
+
+    @Override
+    public PageInfo selectWorkerAll(int currentPage) {
+        ArrayList<Worker> workers = workerMapper.selectWorkerAll();
+        PageInfo pageInfo = new PageInfo(workers);
+        return pageInfo;
+    }
+```
+
+#### 4.log4j配置：
+
+[log4j 学习网址](https://blog.csdn.net/adam_zs/article/details/50242365)
+
+**配置根Logger**
+
+log4j.rootLogger=debug,stdout
+
+ 
+
+**输出到控制台**
+
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+
+log4j.appender.stdout.Target=System.out
+
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+
+log4j.appender.logfile.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %F %p %m%n 
+
+#### 5.mybatis的缓存
+1.默认缓存是一级缓存，是sqlsession级别
+解释：当一个SqlSession结束后该SqlSession中的一级缓存也就不存在了
+2.二级缓存是mapper级别
+在mybatis的全局配置文件中配置：开启二级缓存
+```xml
+<settings>
+    <setting name="cacheEnabled" value="true"/>  
+</settings>
+```
+在mapper.xml的配置文件中打上cache标签
+```xml
+!-- 开启当前mapper的namespace下的二级缓存 -->  
+<cache eviction="LRU" flushInterval="60000" size="512" readOnly="true"/>
+```
+
+注意：Mybatis的缓存机制是基于id进行缓存，也就是说Mybatis在使用HashMap缓存数据时，是使用对象的id作为key，而对象作为value保存
+
+二级缓存的配置文件
+```xml
+<?xml version='1.0' encoding='UTF-8'?>
+<ehcache>
+    <defaultCache
+            maxElementsInMemory="10000"
+            eternal="false"
+            timeToIdleSeconds="120"
+            timeToLiveSeconds="120"
+            overflowToDisk="true"
+            diskPersistent="false"
+            diskExpiryThreadIntervalSeconds="120"
+            memoryStoreEvictionPolicy="LRU"
+    />
+    <!--
+     maxElementsInMemory:缓存最大数目
+     eternal:对象是否永久有效，一但设置了，timeout将不起作用。
+     overflowToDisk:是否保存到磁盘，当系统当机时
+     timeToIdleSeconds:设置对象在失效前的允许闲置时间（单位：秒）。仅当eternal=false对象不是永久有效时使用，可选属性，默认值是0，也就是可闲置时间无穷大。
+     timeToLiveSeconds:设置对象在失效前允许存活时间（单位：秒）。最大时间介于创建时间和失效时间之间。仅当eternal=false对象不是永久有效时使用，默认是0.，也就是对象存活时间无穷大。
+     diskPersistent：是否缓存虚拟机重启期数据 Whether the disk store persists between restarts of the Virtual Machine. The default value is false.
+     diskSpoolBufferSizeMB：这个参数设置DiskStore（磁盘缓存）的缓存区大小。默认是30MB。每个Cache都应该有自己的一个缓冲区。
+     diskExpiryThreadIntervalSeconds：磁盘失效线程运行时间间隔，默认是120秒。
+     memoryStoreEvictionPolicy：当达到maxElementsInMemory限制时，Ehcache将会根据指定的策略去清理内存。默认策略是LRU（最近最少使用）。你可以设置为FIFO（先进先出）或是LFU（较少使用）。
+     clearOnFlush：内存数量最大时是否清除。
+     memoryStoreEvictionPolicy:可选策略有：LRU（最近最少使用，默认策略）、FIFO（先进先出）、LFU（最少访问次数）。
+     FIFO，first in first out，这个是大家最熟的，先进先出。
+     LFU， Less Frequently Used，就是上面例子中使用的策略，直白一点就是讲一直以来最少被使用的。如上面所讲，缓存的元素有一个hit属性，hit值最小的将会被清出缓存。
+     LRU，Least Recently Used，最近最少使用的，缓存的元素有一个时间戳，当缓存容量满了，而又需要腾出地方来缓存新的元素的时候，那么现有缓存元素中时间戳离当前时间最远的元素将被清出缓存。
+  -->
+</ehcache>
+```
+# Spring：
+
+#### spring命名空间：
+
+[Spring命名空间网址](https://blog.csdn.net/xhaimail/article/details/79886478)
+
+***注意：spring注解扫描：<context:component-scan base-package="modules"/>   spring只有扫描注解，注解才能使用***
+
+#### IOC注解版：
+
+***没有接口的类也可以被控制反转***
+
+被spring容器托管的类的注解：此注解只能在类上使用
+
+@Controller		无参数
+
+@Service				无参数
+
+@Repository 			无参数
+
+@Component		无参数
+
+DI属性注入的注解：此注解只能在属性上使用
+
+@Value     相当于bean 标签中的Value 属性		参数：（类型：String  解释：属性的值）
+
+@Resource 相当于bean 标签中的ref 属性			参数：（类型：String  解释：引入类的名字）
+
+关于bean 生命周期的注解：此注解只能在方法上使用
+
+@PostConstruct //初始化方法							无参数
+
+@PreDestroy //销毁方法							无参数
+
+ 
+
+注意：配置文件中的bean可以和 注解形式创建出来的bean可以共存
+
+作用域：@Scope			参数：（类型：String  解释：四个值：四个作用域: 1.singleton//单列  
+
+​                         																										2.prototype//多列
+
+​                        																										 3.request //请求域
+
+​                         																										4.session //会话域）
+
+懒加载：@lazy				参数：（类型：Boolean  解释：是否懒加载）
+
+***java代码：***
+
+
+
+#### AOP注解版：
+
+***注意：开启aspectj的AOP代理：<aop:aspectj-autoproxy proxy-target-class="true"/>   开启后下面的AOP注解才能有效***
+
+------
+
+***错误日志：***
+
+*问题：被AOP代理过的类，不能进行DI注入，会报错*
+
+*解决方法：在开启 aspectj 的 AOP 代理的标签中添加   proxy-target-class="true"   属性并设置为true，问题解决！*
+
+------
+
+@Aspect : 声明该类是一个切面类
+
+***下面的注解要在内部写切入点表达式***
+
+***示例：execution(* modules.Resources.*(..))     解释：execution(返回值 ( * 代表任意返回值)  包名.类名.方法名(..))***
+
+@Pointcut : 声明这是一个切入点 [该注解要放在切面类的方法上]
+
+@Before : 前置通知注解[该注解要放在切面类的方法上]
+
+@After: 后置通知注解[该注解要放在切面类的方法上]
+
+@Around 环绕通知注解[该注解要放在切面类的方法上]
+
+ ***//    @AfterReturning此注解的区别就是@After执行完之后，他才会执行***
+
+@AfterReturning后置返回通知注解[该注解要放在切面类的方法上]          
+
+**AOP注解示例：**
+
+```java
+/**
+ * @author Rain
+ * 要把切面类，让spring容器托管后切面类才会有效，故要添加，托管的注解
+ */
+@Component
+@Aspect
+public class Cut02 {
+    /**
+     * 声明切入点，此方法代表@Pointcut注解上表达式的切入点
+     */
+    @Pointcut("execution(* modules.Resources.*(..))")
+    public void cc() {
+
+    }
+    /**
+     * 前置通知，没有声明切入点，要自己写切入点表达式，声明切入点，直接调用方法名即可
+     */
+    @Before("cc()")
+    public void before(){
+        System.out.println("before通知执行了！");
+    }
+
+    /**
+     * 后置通知，没有声明切入点，要自己写切入点表达式，声明切入点，直接调用方法名即可
+     */
+    @After("cc()")
+    public void afterReturning() {
+        System.out.println("after通知执行了！");
+    }
+    
+    /**
+     * 环绕通知，没有声明切入点，要自己写切入点表达式，声明切入点，直接调用方法名即可
+     * 注意：方法的参数要写：ProceedingJoinPoint 类型，返回值写Object类型
+     * 此参数的proceed()方法，代表执行方法，在此方法的前后添加要增强的内容代码就可进行环绕通知
+     * 最后要返回proceed()方法的返回值
+     */
+    @Around("cc()")
+    public Object aroundSysLog(ProceedingJoinPoint pjp) throws Throwable {
+        System.out.println("环绕通知的前置方法执行了！");
+
+        //获取当前执行方法所需的参数
+        Object[] args = pjp.getArgs();
+        //执行方法并返回
+        Object proceed = pjp.proceed(args);
+        
+        System.out.println("环绕通知的后置方法执行了！");
+        
+        return proceed;
+    }
+    
+    /**
+     * 异常通知，没有声明切入点，要自己写切入点表达式，声明切入点，直接调用方法名即可
+     * 方法要加参数：Throwable 类型，注解中的throwing属性后面要写方法的参数的名字，
+     * 要和方法参数方法的名字保持一致
+     * 
+     * 从参数中获取关于异常的信息并抛出异常信息
+     */
+    @AfterThrowing(value = "cc()", throwing = "throwinfo")
+    public void throwafter(Throwable throwinfo) {
+        System.out.println("发生了异常，异常信息如下：");
+        System.out.println(throwinfo.getMessage());
+    }
+    
+}
+```
+
+#### SpringMVC注解版:
+
+web.xml的头部文件：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
+         version="4.0">
+</web-app>
+```
+
+##### springMVC初始配置：
+
+在Web.xml中配置DispatcherServlet       ：     SpringMVC中央调度器
+
+```xml
+<servlet-mapping>
+    <servlet-name>DispathcharServlet</servlet-name>
+    <url-pattern>*.do</url-pattern>
+</servlet-mapping>
+<servlet>
+    <servlet-name>DispathcharServlet</servlet-name>
+    <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+    <init-param>
+        <param-name>contextConfigLocation</param-name>
+        <param-value>classpath:SpringMVC.xml</param-value>
+    </init-param>
+    <load-on-startup>1</load-on-startup>
+</servlet>
+```
+
+要想加载spring的多个文件，需要在web.xml文件中配置   监听器
+
+```xml
+<!-- 监听服务器上下文加载程序 -->
+<listener>
+<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>//监听内容加载程序
+</listener>
+<!-- 加载spring的配置文件 -->
+<context-param>
+<param-name>contextConfigLocation</param-name>
+<param-value>classpath:Servlet/Springmvc.xml</param-value>
+</context-param>
+```
+
+在springmvc中配置处理映射器，处理适配器，处理器
+
+```xml
+<!--    此标签能代表加载默认配置的映射器和适配器-->
+    <mvc:annotation-driven/>
+<!--    映射器    -->
+<!--    通过此类bean的name属性来指定URL路径-->
+    <bean class="org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping"/>
+<!--    通过此类的bean的id属性来指定URL路径,可以多个映射路径指向一个类-->
+<bean class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+	<property name="mappings">
+    	<props>
+    		<prop key="/user">bean的id值</prop>
+            <prop key="/user">bean的id值</prop>
+    	</props>
+    </property>
+</bean>
+<!--    适配器    -->
+<!--  (默认)  此类需要类实现Controller-->
+	<bean class="org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter"/>
+<!--    此类需要类实现HttpRequestHandler-->
+    <bean class="org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter"/>
+<!--    视图解析器-->
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="prefix" value="/"/>
+        <property name="suffix" value=".jsp"/>
+    </bean>
+    <bean name="/yu.do" class="servlet.Dome01"/>
+```
+
+***注意：springMVC和applicationContext的配置文件，注解扫描springMVC占主导地位***
+
+Java，Spring原始类接收请求代码写法：
+
+实现Controller，返回ModelAndView对象，里面的setViewName()方法是返回的路径，addObject()方法等于键值存储数据，页面直接用EL表达式就可直接取出
+
+##### 请求数据MVC注解写法：
+
+***注意：springmvc不影响servlet的使用,所以在请求时方法上加 Request的参数也可以有效果，方法的返回值为空就不会报错！***
+
+***1***.接收请求：接收请求的类不用实现任何接口
+
+@RequestMapping("请求路径" ，method = {RequestMethod.GET,RequestMethod.POST})  
+
+//可写类上，可写方法上，可指定浏览器发出请求的类型,可以同时接收多种请求方式
+
+***2***.返回数据：
+
+**返回页面路径**：
+
+方法返回值是String类型：普通返回路径 ，会自动返回到视图解析器，由视图解析器添加前缀和后缀
+
+（请求转发：forward：全路径    ，    重定向：redirect：全路径 ）这两种返回方式不会经过视图解析器，所以要写全路径 
+
+------
+
+***错误日志：***
+
+问题：forward 相对路径问题
+
+解决方法： 当前类映射路径 : **/antion/d1.action**
+					请求转发相对路径：**forward:d2.action**
+					转发结果后的映射路径：**/antion/d2.action**
+					总结：请求转发写相对路径会自动加上，上一个类映射路径的/antion
+
+------
+
+**返回json数据**：方法返回值是任意类型和对象：
+
+@ResponseBody    // 返回json数据，写在方法上，方法的返回值可以直接返回任意对象，此注解会自动将返回到页面的							对象封装成json格式的数据，但项目要导入jackson的包，此jar包用于此注解解析json数据
+
+***3***.MVC封装请求数据：
+
+**普通参数**：直接在参数列表内写相应的值的name名字可直接获取，对象也可以直接封装进去
+
+**json参数**：@RequestBody   //此注解写在方法的参数列表上，主要封装前台页面发送的json数据
+
+**路径参数**：从请求的路径中取出值在方法的参数中用 ：
+
+​					@pathVariable("路径变量名")  //只能取出  （/user/{name}/{sex}/{age}）这样路径的中的值
+
+​					@pathParam("路径变量名")  //只能取出  （ 路径？name=”照顾你“&sex="男"&age=12）这样的路径中的值
+
+***注意：封装json字符串数据：在接收请求的方法上添加一个：@RequestBody 注解即可封装***，此方式对封装Map数据很适用
+
+***注意：封装前台传过来的对象数据，表单数据(包括json对象) 用 @RequestParam注解即可封装***，此方式对封装Map数据很适用
+
+# Spring整合mybatis
+
+第一种配置方式：**此种配置方式可以加载mybatis的全局配置文件**
+
+在spring容器内配置整合mybatis，让spring代理获取并生成Mapper对象，
+
+直接在类中添加@Autowired注解，即可使用spring代理的对象
+
+```xml
+  <!--配置c3p0数据源-->
+    <bean id="c3p0" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="driverClass" value="com.mysql.cj.jdbc.Driver"/>
+        <property name="user" value="yu"/>
+        <property name="jdbcUrl" value="jdbc:mysql://192.168.217.13:3306/rain?serverTimezone=GMT"/>
+        <property name="password" value="123456"/>
+    </bean>
+    <!--mapper工厂-->
+    <bean id="sessionFactoryBean" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!--mybatis的全局配置文件路径-->
+        <property name="configLocation" value="classpath:mybatis.xml"/>
+        <!--传入c3p0数据源-->
+        <property name="dataSource" ref="c3p0"/>
+    </bean>
+    <!--spring生成mapper对象-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!--指定上方mapper工厂的id名-->
+        <property name="sqlSessionFactoryBeanName" value="sessionFactoryBean"/>
+        <!--要扫描的接口-->
+        <property name="basePackage" value="mapper"/>
+    </bean>
+	<!--配置事务管理器-->
+	<bean class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+    	<!--传入数据源-->
+    	<property name="dataSource" ref="c3p0"/>
+    	<!--提交失败时回滚-->
+    	<property name="rollbackOnCommitFailure" value="true"/>
+	</bean>
+```
+
+第二种配置方式：**此种配置方式不用加载mybatis的全局配置文件**
+
+```xml
+<!--配置c3p0数据源-->
+<bean id="c3p0" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+    <property name="driverClass" value="com.mysql.cj.jdbc.Driver"/>
+    <property name="user" value="yu"/>
+    <property name="jdbcUrl" value="jdbc:mysql://192.168.217.13:3306/rain?serverTimezone=GMT"/>
+    <property name="password" value="123456"/>
+</bean>
+<!--mapper工厂-->
+<bean class="org.mybatis.spring.SqlSessionFactoryBean">
+    <!--传入c3p0数据源-->
+    <property name="dataSource" ref="c3p0"/>
+    <!--指定扫描的mapper映射文件的路径,不写（/*.xml）会报错，类不知道要找什么后缀的文件-->
+    <property name="mapperLocations" value="mapper/*.xml"/>
+</bean>
+<!--spring生成mapper对象-->
+<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+    <!--要扫描的接口-->
+    <property name="basePackage" value="mapper"/>
+</bean>
+<!--配置事务管理器-->
+<bean class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+    <!--传入数据源-->
+    <property name="dataSource" ref="c3p0"/>
+    <!--提交失败时回滚-->
+    <property name="rollbackOnCommitFailure" value="true"/>
+</bean>
+```
+
+# spring文件上传下载：
+
+导入pom依赖：
+
+```xml
+<!--关于文件上传下载的依赖-->
+<dependency>
+    <groupId>commons-fileupload</groupId>
+    <artifactId>commons-fileupload</artifactId>
+    <version>1.3.1</version>
+</dependency>
+```
+
+***在springmvc中设置MultipartFile的文件解析器：不配置会报400错误***
+
+```xml
+<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+    <property name="defaultEncoding" value="UTF-8"/>
+    <property name="maxUploadSize" value="10485760"/>
+</bean>
+```
+
+#### spring文件上传：
+
+上传单个文件直接封装一个MultipartFile 文件对象即可，然后用注解@RequestParam封装页面传文件的数据
+
+上传多个文件需要把MultipartFile对象写成 MultipartFile[] 数组形式，然后用注解@RequestParam封装页面传文件的数据
+
+```java
+@RequestMapping(value = "/uploading.do", method = RequestMethod.POST)
+    public void uploading(String name, @RequestParam("photo") MultipartFile[] file, HttpServletResponse resp) throws IOException {
+        resp.setCharacterEncoding("UTF-8");
+        System.out.println("参数name的值是：" + name);
+        for (int i = 0; i < file.length; i++) {
+            try {
+                String contentType = file[i].getContentType();
+                System.out.println("文件的内容类型是：" + contentType);
+                String name1 = file[i].getOriginalFilename();
+                System.out.println("文件名字是：" + name1);
+                byte[] bytes = file[i].getBytes();
+
+//        上传的文件目的地
+                File file1 = new File("F:\\test01\\" + name1);
+                if (!file1.exists()) {
+                    boolean mkdirs = file1.createNewFile();
+                    System.out.println("文件创建" + mkdirs + "!");
+                }
+                FileOutputStream fileOutputStream = new FileOutputStream(file1);
+                fileOutputStream.write(bytes);
+                fileOutputStream.close();
+            } catch (IOException e) {
+                resp.getWriter().write("文件上传失败！");
+            }
+        }
+        resp.getWriter().write("文件上传成功！");
+    }
+```
+
+#### spring文件下载：
+
+**多文件下载：**   可以进行：zip压缩包下载
+
+```java
+    @RequestMapping(value = "/download.do",method = "RequestMethod.POST")
+    public void download(String fileName, HttpServletResponse resp) throws IOException {
+        FileInputStream fileInputStream = new FileInputStream(new File(fileName));
+//        设置响应头,浏览器才能下载文件
+        resp.setHeader("Content-Disposition","attachment;filename="+fileName);
+//        存第一次获取长度
+        byte[] bytes = new byte[(1024*1024)*10];
+        int read = fileInputStream.read(bytes);
+//        存第二次并返回数据
+        byte[] bytes1 = new byte[read];
+        for(int i = 0; i < bytes1.length; i++){
+            bytes1[i] = bytes[i];
+        }
+//        向页面响应数据
+        resp.getOutputStream().write(bytes1);
+    }
+```
+
+------
+
+**错误日志：**
+
+***问题：***
+
+```java
+//        存第一次获取长度
+        byte[] bytes = new byte[(1024*1024)*10];
+        int read = fileInputStream.read(bytes);
+//        存第二次并返回数据
+        byte[] bytes1 = new byte[read];
+		int read = fileInputStream.read(bytes);
+```
+
+存第一次 bytes 有长度，存第二次 bytes1 无长度
+
+***问题原因：***fileInputStream.read(bytes);方法同一个文件字节流只能装一次，不能装第二次
+
+***解决方法：***
+
+用for循环把第一次存进字节数组的数据，再存进第二个字节数组里面，问题解决！
+
+# spring拦截器：
+
+[/ 和/* 和/**的区别](https://www.cnblogs.com/chenmz1995/p/10367199.html)
+
+/拦截路径
+
+/*拦截资源
+
+/**拦截多级资源包括子文件夹的资源
+
+#### spring自定义拦截器：
+
+在SpringMVC.xml的配置文件中配置：
+
+**只能配置在DispatcherServlet(中央调度器)能找到的配置文件中，不然拦截不到DispatcherServlet收到的请求路径**
+
+```xml
+<!--spring多个拦截器配置-->
+<mvc:interceptors>
+    <!--第一个拦截器-->
+    <mvc:interceptor>
+        <!--要拦截的路径-->
+        <mvc:mapping path="/**"/>
+        <!--要放行的路径-->
+        <mvc:exclude-mapping path="/index.jsp"/>
+        <!--拦截后运行的代码类，即拦截器类，此类需要实现HandlerInterceptor-->
+        <bean class="models.Filter"/>
+    </mvc:interceptor>
+    <!--可以根据上面配置的拦截器在 <mvc:interceptors> 标签内以同样的方法配置多个拦截器。。。-->
+</mvc:interceptors>
+```
+
+拦截器：HandlerInterceptor 的实现类：
+
+```java
+public class Filter implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Object o) throws Exception {
+        return false;
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Object o, ModelAndView modelAndView) throws Exception {
+
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Object o, Exception e) throws Exception {
+	
+    }
+}
+```
+
+拦截器解释：
+
+多个拦截器执行顺序：**配置多个拦截器时，以配置文件从上到下的顺序执行**
+
+  如有两个拦截器：**都放行时：**
+
+  (1)方法执行前返回值都为true,则顺序如下：
+
+{
+
+  方法执行**前**（请求拦截）1  
+
+  方法执行**前**（请求拦截）2
+
+  方法执行**后**（响应拦截）2
+
+  方法执行**后**（响应拦截）1
+
+  页面**渲染后**2
+
+  页面**渲染后**1 
+
+}
+
+总结：请求拦截放行，为true,不放行为false，preHandle(请求拦截)方法有返回值，返回值类型是true和false
+
+​			页面渲染拦截执行条件:	1.执行条件：请求拦截返回为true
+
+​														2.执行时机：请求拦截和响应拦截，页面渲染，都执行后，才会执行
+
+​														3.执行方式：倒着执行
+
+#### 异常拦截器：
+
+创建全局异常处理类:
+
+```java
+/**
+ * 在spring容器里面定义这是一个全局异常处理类
+ *
+ * @ControllerAdvice 此注解声明这是一个处理异常的类
+ * @RestControllerAdvice 此注解是@ControllerAdvice和@ResponseBody的结合，代表每个异常处理方法返回值都是json字符串
+ */
+@ControllerAdvice
+public class BaseExceptionHandler {
+    /**
+     *@ExceptionHandler(NullPointerException.class)此注解声明此方法处理指定的异常
+     *方法的返回值；可以返回任何数据类型，包括自定义类型
+     */
+    @ExceptionHandler(NullPointerException.class) //可以省去try/cath代码
+    @ResponseBody     //返回的数据解析成json字符串
+    public ReslutObject BaseExceptionHandler() {
+       return new ReslutObject(false, StatusCode.ERROR, "请求失败！");
+    }
+
+}
+```
+
+#### spring编码集过滤器：
+
+```xml
+<!-- 编码过滤器 -->
+<filter-mapping>
+    <filter-name>characterEncodingFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+</filter-mapping>
+<filter>
+    <filter-name>characterEncodingFilter</filter-name>
+    <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+    <init-param>
+        <!-- 改变现有编码方式为 -->
+        <param-name>encoding</param-name>
+        <param-value>UTF-8</param-value>
+    </init-param>
+    <init-param>
+        <!-- 任何情况下强制使用此编码 -->
+        <param-name>forceEncoding</param-name>
+        <param-value>true</param-value>
+    </init-param>
+</filter>
+```
+
+# spring事务管理：
+
+非注解的方式：
+
+```xml
+  		<!-- 配置事务管理器 -->
+    	<bean id="transactionManagers" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        	<property name="dataSource" ref="c3p0"/>
+    	</bean>
+
+		<!--配置事务切面类-->
+		<tx:advice id="txAdivce" transaction-manager="txManager">
+            <tx:attributes>
+                <tx:method name="insert*" propagation="REQUIRED"/>
+                <tx:method name="update*" propagation="REQUIRED"/>
+                <tx:method name="delete*" propagation="REQUIRED"/>
+                <tx:method name="save*" propagation="REQUIRED"/>
+                <tx:method name="add*" propagation="REQUIRED"/>
+                
+                <tx:method name="find*" read-only="false"/>
+                <tx:method name="get*" read-only="false"/>
+                <tx:method name="view*" read-only="false"/>
+            </tx:attributes>
+        </tx:advice>
+        
+        <aop:config>
+            <!--在指定类上声明注解-->
+            <aop:pointcut expression="execution(* com.pp.service.*.*(..))" id="txPointcut"/>
+            <!--把事务切面类放到指定的类上，声明事务-->
+            <aop:advisor advice-ref="txAdivce" pointcut-ref="txPointcut"/>
+        </aop:config>
+```
+
+注解方式：
+
+```xml
+<!--事务管理器-->
+<bean id="transactionManagers" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+    <property name="dataSource" ref="c3p0"/>
+</bean>
+
+<!--开启事务注解-->
+<tx:annotation-driven transaction-manager="transactionManagers"/>
+```
+
+*直接在类或方法上写：@Transactional 注解即可提交事务*
+
+**@Transactional类上和方法上的区别：**
+
+类上：@Transactional放在类级别上等同于该类的每个公有方法都放上了@Transactional
+
+方法上：@Transactional只对当前方法有效
+
+**[tx:method 的属性详解：](https://blog.csdn.net/qq_37272886/article/details/88638575)**
+
+| 属性                   | 类型            | 默认值                      | 说明                   |
+| ---------------------- | --------------- | --------------------------- | ---------------------- |
+| propagation            | Propagation枚举 | REQUIRED                    | 事务传播属性           |
+| isolation              | isolation枚举   | DEFAULT(所用数据库默认级别) | 事务隔离级别           |
+| readOnly               | boolean         | false                       | 是否才用优化的只读事务 |
+| timeout                | int             | -1                          | 超时(秒)               |
+| rollbackFor            | Class[]         | {}                          | 需要回滚的异常类       |
+| rollbackForClassName   | String[]        | {}                          | 需要回滚的异常类名     |
+| noRollbackFor          | Class[]         | {}                          | 不需要回滚的异常类     |
+| noRollbackForClassName | String[]        | {}                          | 不需要回滚的异常类名   |
+
+ **readOnly：**
+事务属性中的readOnly标志表示对应的事务应该被最优化为只读事务。如果值为true就会告诉Spring我这个方法里面没有insert或者update，你只需要提供只读的数据库Connection就行了，这种执行效率会比read-write的Connection高，所以这是一个最优化提示。在一些情况下，一些事务策略能够起到显著的最优化效果，例如在使用Object/Relational映射工具（如：Hibernate或TopLink）时避免dirty checking（试图“刷新”）
+
+#### isolation：事务的隔离级别：
+
+|             隔离级别              | 隔离级别的值 |                          导致的问题                          |
+| :-------------------------------: | :----------: | :----------------------------------------------------------: |
+|     Read UnCommited: 读未提交     |      0       |                           导致脏读                           |
+|    Read Commited：   读已提交     |      1       |                避免脏读，允许不可重复读和幻读                |
+|    Repeatable Read： 可重复读     |      2       |                避免脏读，不可重复读，允许幻读                |
+| serlalizable:			  串行化 |      3       | 串行化读，事务只能一个一个执行，避免了脏读，不可重复读，幻读，执行效率慢，使用时慎重 |
+
+​			**脏读**：一个事务可以读取到另一个事务未提交的修改后的数据。假设这个事务发生了异常进行了事务回滚，那么这个时候另一个事						务就读取到了脏数据。
+
+**不可重复读**：如果在一个事务中有两次或多次多操作，在这些读取操作之间，另一个事务对数据进行了修改，这时候读取的数据是不一致						的。
+
+​			**幻读**：一个事务对一定范围的数据进行批量修改，另一个事务在这个范围增加一条数据，此时该事务就会丢失对新增数据的修改。
+
+
+
+#### propagation：Spring中七种事务传播行为：
+
+```
+事务的传播行为，默认值为 Propagation.REQUIRED。可以手动指定其他的事务传播行为，如下：
+- Propagation.REQUIRED
+
+如果当前存在事务，则加入该事务，如果当前不存在事务，则创建一个新的事务。
+- Propagation.SUPPORTS
+
+如果当前存在事务，则加入该事务；如果当前不存在事务，则以非事务的方式继续运行。
+- Propagation.MANDATORY
+
+如果当前存在事务，则加入该事务；如果当前不存在事务，则抛出异常。
+- Propagation.REQUIRES_NEW
+
+重新创建一个新的事务，如果当前存在事务，延缓当前的事务。
+- Propagation.NOT_SUPPORTED
+
+以非事务的方式运行，如果当前存在事务，暂停当前的事务。
+- Propagation.NEVER
+
+以非事务的方式运行，如果当前存在事务，则抛出异常。
+- Propagation.NESTED
+
+如果没有，就新建一个事务；如果有，就在当前事务中嵌套其他事务。
+```
+
+# MD5加密：
+
+这是一个工具类，使用时直接调用即可：
+
+```java
+    public static String md5Encryption(String password) throws NoSuchAlgorithmException {
+        MessageDigest md5 = MessageDigest.getInstance("MD5");
+        byte[] digest = md5.digest(password.getBytes());
+        StringBuilder md5String = new StringBuilder();
+        for (byte s : digest) {
+//           把字节数组变成int类型的正整数
+            int a = s & 255;
+//           把正整数转换成十六进制
+            if (a < 16) {
+                md5String.append("0").append(Integer.toHexString(a));
+            } else {
+                md5String.append(Integer.toHexString(a));
+            }
+        }
+        return md5String.toString();
+    }
+```
+
+# 乱码问题：
+
+**请求参数乱码问题：**
+
+接收参数中文乱码：解决的三种方式：
+
+*URL路径中文参数要进行编码，才能不会乱码！*
+
+1.request.setCharacterEncoding("utf-8");意思是告诉服务器，使用指定的编码格式进行解码。此方法只对post方法有效
+
+2.String name = new String(name.getBytes("iso-8859-1"),"utf-8"); 对接收到的数据进行ISO-8859-1进行解码，再进行UTF-8进行编码，得到我们想要的参数格式
+
+3.直接在发出请求的页面里面进行设置编码格式：如果是from表单发出请求直接在标签上设置属性：accept-charset="UTF-8" 此方法只对get方法有效
+
+**页面乱码：**
+
+可能的问题：
+
+**1.页面没有设置编码集** 
+
+解决方法：在文件的头部加上编码集标签
+
+​				html页面: <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+​				jsp页面: <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+
+**2.字母和中文汉字是不同编码**
+
+解决方法：用记事本打开页面，选择另存为 ，点击编码格式为 UTF-8 ，再重新对页面进行一次编码
+
+**3.Tomcat问题** 
+
+1.Tomcat页面乱码：
+
+Tomcat乱码参考网：https://blog.csdn.net/cfpl12011124/article/details/53488931
+
+​									https://blog.csdn.net/panzijie/article/details/83709820
+
+解决方法：在TOMCAT的catalina.bat文件中找到 set JAVA_OPTS= 在上边的空白处加上(set JAVA_OPTS=%JAVA_OPTS% -Dfile.encoding=UTF8)就可以解决
+
+2.tomcat URL乱码：
+
+打开 C:\java-packs\tomcat\apache-tomcat-8.5.57\conf\server.xml 文件，
+
+在  <Connector port="8080" protocol="HTTP/1.1"
+
+​        connectionTimeout="30000"
+
+​        redirectPort="8443" URIEncoding="utf-8"/>
+
+中添加 URIEncoding="utf-8 参数
+
+**4.从数据库查询的数据乱码**
+
+解决方法：使用命令查看数据库的编码集：show variables like '%char%'
+
+**5.项目的编码格式不是UTF-8**
+
+解决方法：设置当前项目的编码格式是UTF-8
+
+**6.idea 编译出来的html页面乱码**
+
+解决方法：打开 ：D:\Tomcat\apache-tomcat-8.5.9\apache-tomcat-8.5.9\conf\web.xml
+
+添加：init-param 初始化参数 ：fileEncoding      为  UTF-8   ,   问题解决！
+
+```xml
+  <servlet>
+    <servlet-name>default</servlet-name>
+    <servlet-class>org.apache.catalina.servlets.DefaultServlet</servlet-class>
+    <init-param>
+      <param-name>debug</param-name>
+      <param-value>0</param-value>
+    </init-param>
+    <init-param>
+      <param-name>listings</param-name>
+      <param-value>false</param-value>
+    </init-param>
+    <load-on-startup>1</load-on-startup>
+    <init-param>
+      <param-name>fileEncoding</param-name>
+      <param-value>UTF-8</param-value>
+    </init-param>
+  </servlet>
+```
+

@@ -1,0 +1,58 @@
+# maven
+
+1.官网下载：http://maven.apache.org/
+
+2.解压到文件夹中
+
+3.修改maven的settings.xml文件
+
+​	<1>修改仓库路径： <localRepository>仓库路径：仓库一般放在maven的文件内部</localRepository>
+
+​	<2>修改镜像路径：
+
+```xml
+<mirror>
+    <id>alimaven</id>
+    <name>aliyun maven</name>
+    <mirrorOf>central</mirrorOf>
+    <url>http://maven.aliyun.com/nexus/content/repositories/central/</url>
+</mirror>
+```
+4.配置环境变量：MAVEN_HOME
+
+   在path路径中添加：%MAVEN_HOME%\bin;
+
+5.idea配置maven：
+
+直接在idea中的settings设置中搜索maven并配置
+
+6.创建maven项目时，模板选择第二个webapp: 第一次创建项目时，maven会自动从网上获取模板，阿里的镜像仓库找不到，所以创建项目时要添加
+
+参数，**archetypeCatalog	=	internal**	
+
+web.xml文件中的webapp标签要添加命名空间：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
+         version="4.0">
+</web-app>
+```
+
+***注意：***
+
+1.修改maven的setting.xml文件可以在idea中进行修改不容易报错
+
+2.统一pom依赖的版本：
+
+在pom文件中添加<properties>
+
+​									<spring.version>4.3.19.RELEASE</spring.version> 
+
+​										//此标签是自定义标签，标签中间必须要用点分隔，RELEASE(意思是项目发布时，获取最新的依赖)
+
+​								</properties>
+
+在依赖的<version>标签中写${spring.version}即可获取自定义的版本号

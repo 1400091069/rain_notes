@@ -1,0 +1,117 @@
+## 1.安装mycat
+
+## 2.修改三个配置文件配置文件
+
+### server.xml
+
+```xml
+         <user name="user">
+                <property name="password">user</property>
+             	<!--虚拟的数据库名-->
+                <property name="schemas">TESTDB</property>
+                <property name="readOnly">true</property>
+                <property name="benchmark">1111</property>
+                <property name="usingDecrypt">1</property>
+        </user>#介绍下后面两个属性benchmark： 通过该属性来限制前端的整体连接数量。如果其值为0或者不对其进行设置，则表示不限制连接数量、usingDecrypt： 通过设置该属性来开启密码加密功能。默认值是0，表示不开启加密，值为1说明开启密码加密功能。
+```
+
+### schema.xml
+
+```xml
+<!-- name:虚拟的数据库名，要和server.xml中设置的虚拟的数据库名一致
+ 	 checkSQLschema：是否开启检查sql模式 
+	 sqlMaxlimit:限制sql的分页数
+ -->
+<schema name="TESTDB" checkSQLschema="false" sqlMaxlimit="100">
+    <!--虚拟的表 
+		name:虚拟的表名 
+		primarykey:主键名 
+		autoIncrement:主键是否自动增长 
+		dataNode:此表有几个数据节点 
+		rule:节点运用的规则
+	 -->
+    <table name="user" primarykey="id" autoIncrement="true" dataNode="dn1,dn2" rule="mod-log"/>
+</schema>
+
+
+
+
+
+<!--数据节点，相当于真实的数据库
+	name:节点的名字，可以被虚拟表引用
+	dataHost:真实主机的引用
+	database:真实主机上的数据库名
+ -->
+<dataNode name="dn1" dataHost="mysql01" database="MAVEN_SSM"/>
+<dataNode name="dn2" dataHost="mysql02" database="MAVEN_SSM"/>
+
+
+
+
+
+
+
+<!--真实的主机配置
+	name:自定义命名，可以被上方的dataNode节点引用
+	maxCon:最大连接数
+	balance:
+	writeType:
+	dbType:此数据库的类型
+	dbDriver:
+	switchType:
+	slaveThreshold:
+ -->
+<dataHost name="mysql01" maxCon="10" balance="0" writeType="0" dbType="mysql" dbDriver="native" 			           switchType="1" slaveThreshold="100">
+	<!--心跳查询-->    
+    <heartbeat>select user()</heartbeat>
+    <!--wirteHost:只写主机
+		host:自定义，读的主机名字
+		url:远程路径
+		user:连接数据库要用的 用户名
+		password:连接数据库要用的 密码
+	 -->
+    <wirteHost host="hostm1" url="localhost:3306" user="root" password="123456">
+        <!--readHost:只读主机,此标签在 wirteHost标签的内部定义，为了实现读写分离
+			host:自定义，读的主机名字
+			url:远程路径
+			user:连接数据库要用的 用户名
+			password:连接数据库要用的 密码
+		 -->
+        <readHost host="hosts2" url="192.168.217.455:3306" user="root" password="123456">
+    </wirteHost>
+</dataHost>
+```
+
+### rule.xml
+
+```xml
+<!--此标签定义表的规则
+	name:被schema.xml引用的名字
+ -->
+<tableRule name="mod-log">
+    <!--定义规则
+		columns:指定列
+		algorithm:引用下方的指定列的规则-->
+    <rule>
+        <columns>id</columns>
+        <algorithm>fu1</algorithm>
+    </rule>
+</tableRule>
+<!--创建规则，可以被上方的定义表规则的标签引用
+	name:自定义名字，用来被引用
+	class:定义规则的类
+ -->
+<function name="fu1" class="io.mycat.route.function.PartitionByCRCPreSlot">
+    <!--当前规则所需要的参数-->
+    <property name="count">2</property>
+</function>
+```
+
+## 3.总结：
+
+mycat把所有数据库融合成一个数据库
+
+创建虚拟数据库，引用真实数据库
+
+创建虚拟表，引用真实数据库中的表
+

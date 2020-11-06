@@ -1,0 +1,68 @@
+## nginx
+
+1.关闭防火墙
+
+2.docker下载nginx
+
+3.修改容器内的 ：/etc/nginx/conf.d/default.conf 文件 或 在/etc/nginx/conf.d文件夹的路径下上传 .conf文件后缀的文件，文件名任意，文件内容的写法和default.conf文件的写法一样！
+
+注意：此文件直接在内部写 server 块即可！
+
+反向代理的多个ip后添加weight添加权重权重越大，受到的访问就越多，这就是负载均衡！
+
+```json
+# tomcat01反向代理的名字
+upstream tomcat01 {
+	#多台服务器weight权重数字越大受到的访问就越多
+	server 192.168.217.111:8081 weight=3;
+	server 192.168.217.111:8082 weight=2;
+	server 192.168.217.111:8083 weight=1;
+ }
+#一个server代表一个虚拟主机，也就代表一个网站，处理多台服务器的负载均衡
+server{
+	#主机的端口
+	listen   80;
+	#主机的ip也可以写名字(即域名)
+	server_name 192.168.217.111;
+    
+    #警告
+    #location 斜杠后有东西，即匹配带后缀的请求，prproxy_pass 后面必须带项目名，不带项目名则会找不到报404错误
+    #location 斜杠后没有东西即匹配端口，匹配端口时proxy_pass 后面不能带项目名
+    
+
+	#location代表要访问的ip和端口 / 要匹配的项目名 所以location能进行项目匹配
+    #注意：location / 没有项目名，proxy_pass ip:端口/ 也不能有东西，就算有也访问不到，进不来
+    #所以location有项目名，proxy_pass后也要有相应的项目名这样才能访问成功
+    #浏览器访问时也要加项目名,这样才能匹配到此对应的location
+	location /cloud_storage {
+		#http://[upstream 块的名字] / 要访问的项目名
+		proxy_pass http://tomcat01/cloud_storage;
+		
+		#nginx重写请求头中的host主机名，不然会找不到此虚拟主机造成页面无限重定向
+		proxy_set_header   Host             $host;
+		#nginx在网关(路由)内部设置请求头的IP为反向代理的多个ip
+        proxy_set_header   X-Real-IP        $remote_addr;
+        proxy_set_header   X-Forwarded-For  $proxy_add_x_forwarded_for;
+	}
+    #动静分离，对访问的静态资源进行匹配，后缀是html,css,js的请求都能匹配到
+    location ~.*\./(html|css|js)${
+        #有时会找不到root定义的文件路径下的资源，所以要开启自动查找文件索引
+        autoindex on;
+        #root 定义路径，定义从此路径下找静态资源
+        root /usr/share/nginx;         
+                     
+    }
+    
+ }
+```
+**注意：lication可以有多个，一个lication块代表一个项目**
+
+​			**server也可以有多个，一个server块代表一个网站**
+
+**总结：要想直接访问到项目lication 斜杠后要加项目名，proxy_pass ip和端口后也要有项目名**
+
+## nginx错误解决：
+
+问题：无限重定向
+
+解决：https://blog.csdn.net/yskyj/article/details/39472753

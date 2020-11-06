@@ -1,0 +1,160 @@
+# 动态端口映射：
+
+**应用场景**：家庭电脑联网时，默认就是动态端口映射的形式
+
+内网中的一台电脑要访问新浪网，会向NAT网关发送数据包，包头中包括对方(就是新浪网)IP、端口和本机IP、端口，NAT网关会把本机IP、端口替换成自己的公网IP、一个未使用的端口，并且会记下这个映射关系，为以后转发数据包使用。然后再把数据发给新浪网，新浪网收到数据后做出反应，发送数据到NAT网关的那个未使用的端口，然后NAT网关将数据转发给内网中的那台电脑，实现内网和公网的通讯.当连接关闭时，NAT网关会释放分配给这条连接的端口，以便以后的连接可以继续使用。动态端口映射其实也就是NAT网关的工作方式。 
+
+# 静态端口映射：
+
+**应用场景**：做网站时要做静态端口映射
+
+就是在NAT网关上开放一个固定的端口，然后设定此端口收到的数据要转发给内网哪个IP和端口，不管有没有连接，这个映射关系都会一直存在。就可以让公网主动访问内网的一个电脑。
+
+**网关**：小型的防火墙，用来过滤外部传输给内网的网络的数据 
+（网关真实作用：）指定过滤规则，决定接收的数据包是转发给内网的其他主机，还是本地主机接收，所以可以做(数据转发，相当于)端口映射
+
+**NAT**：俗称：网线分线器：功能：一根网线，多台电脑拨号（拨号/宽带账号）上网，网速互不影响
+（NAT真实作用：）内网ip，和外网ip一对一，映射
+
+**路由**：功能：虚拟拨号：一根网线，一个宽带账号，多人使用，网速有影响
+（路由真实作用：）多个内网ip，映射一个外网ip，网速，会变慢
+
+**AP**：功能：无线网络，无线热点，多个AP之间可以互联，把一根热点的信号进行扩大，AP分为：有线AP和无线AP
+
+***NAT网关  = 网关 + NAT***
+
+**无线路由器 = 网关 + 路由 + NAT + AP**
+
+**注意：**做静态端口映射时，开始端口和结束端口，是端口的一个范围，例如：8000 ~ 8005 之间的所有端口，包括8000和8005都是可以映射和访问的
+
+**静态端口映射：在无线路由器中的，" 路由 " 管理页面进行设置,不同的厂家页面不一样，有点叫虚拟主机，有的叫NAT端口映射设置**
+
+
+
+NAT：作用：形成一个新的局域网，可以对外网的ip进行拨号上网，不过只支持对外网的ip一对一，进行拨号上网
+
+​		    静态映射：一个固定的内网ip(静态ip)映射一个外网ip
+
+​		    动态映射：多个内网ip，同时映射多个外网ip
+
+路由：作用：虚拟拨号，对 NAT 有辅助作用，只支持在有NAT的基础上才能使用路由，相当于对NAT的升级版的管理，让NAT有了虚拟						拨号的功能
+
+​			静态映射：多个固定的内网ip映射一个外网ip，内网的ip存放在路由表内，由于内网的ip是固定的，所以路由表的IP不会更新
+
+​		    动态映射：多个动态的内网ip，映射一个外网ip，内网的ip存放在路由表内，路由表的IP会不定时更新
+
+路由表的作用：用来存储多个内网映射到同一个外网的ip，这样有利于外网服务器向内网返回数据时，更好更快的找到内网的哪台主机发送的请求，并把外网服务器响应的数据，根据路由表上对应的ip，返回给对应的内网主机
+
+
+###### 结论：所以 " 端口映射 " 只能在NAT或路由上设置,一个是进行内网网ip映射，一个是对NAT功能的扩展及管理
+
+​					虚拟拨号的用户，在路由上设置
+
+​					非虚拟拨号用户在NAT上设置
+
+
+
+## **网络部署原理**
+
+有线部署：外网网线：光猫：网关：路由：NAT：PC(客户端)
+
+无线部署：外网网线：光猫：网关：路由：NAT：无线AP：PC(客户端)
+
+
+
+# 总结：
+
+端口映射（Port Mapping）：如果你是ADSL、MODEM或光纤等宽带接入用户，想在公司或网吧内部建一个服务器或WEB站点，并且想让互联网上的用户访问你的服务器，那么你就会遇到端口映射问题。通常情况下，路由器都有防火墙功能，互联网用户只能访问到你的路由器WAN口(接ADSL的电话线口或路由宽带外网口)，而访问不到内部服务器。要想让互联网用户访问到你建的服务器，就要在路由器上做一个转发设置，也就是端口映射设置，让互联网用户发送的请求到达路由器后,再转发到你建立的服务器或WEB站点。这就是端口映射。由于各个路由器厂商所取功能名称不一样，有的叫虚拟服务器，有的叫NAT设置端口映射
+
+**学习网址**：https://jingyan.baidu.com/article/7908e85c9c8827af491ad251.html
+
+
+# 网络分层原理
+**学习网址**https://blog.csdn.net/weixin_40673608/article/details/88550746
+
+**OSI七层模型**：
+
+物理层（Physics Layer）、
+数据链路层（Data Link Layer）、
+网络层（Network Layer）、
+传输层（Transport Layer）、
+会话层（Session Layer）、
+表示层（Presentation Layer）、
+应用层（Application Layer）。
+
+**TCP/IP五层模型**
+
+物理层（Physics Layer）、
+数据链路层（Data Link Layer）、
+网络层（Network Layer）、
+传输层（Transport Layer）、
+应用层（Application Layer）。
+
+**TCP/IP四层模型**
+
+物理层（Physics Layer）、
+网络层（Network Layer）、
+传输层（Transport Layer）、
+应用层（Application Layer）。
+
+
+###在服务器上做端口映射
+
+linux服务器上端口映射
+发表评论
+不一定最好+正确，但是可用
+1，清空原有规则，不是必须的。
+
+#!/bin/sh
+#accept-all policy
+IPT=’/sbin/iptables’
+$IPT -t nat -F
+$IPT -t nat -X
+$IPT -t nat -P PREROUTING ACCEPT
+$IPT -t nat -P POSTROUTING ACCEPT
+$IPT -t nat -P OUTPUT ACCEPT
+$IPT -t mangle -F
+$IPT -t mangle -X
+$IPT -t mangle -P PREROUTING ACCEPT
+$IPT -t mangle -P INPUT ACCEPT
+$IPT -t mangle -P FORWARD ACCEPT
+$IPT -t mangle -P OUTPUT ACCEPT
+$IPT -t mangle -P POSTROUTING ACCEPT
+$IPT -F
+$IPT -X
+$IPT -P FORWARD ACCEPT
+$IPT -P INPUT ACCEPT
+$IPT -P OUTPUT ACCEPT
+$IPT -t raw -F
+$IPT -t raw -X
+$IPT -t raw -P PREROUTING ACCEPT
+$IPT -t raw -P OUTPUT ACCEPT
+
+开始设置
+
+/sbin/iptables -A INPUT -i eth0 -j ACCEPT
+echo “1” > /proc/sys/net/ipv4/ip_forward
+#服务器公网ip
+export AO=”6.1.1.3″
+#服务器内网ip
+export AI=”172.16.96.123″
+#目标机器内网ip
+export BI=”172.16.97.234″
+#公网的端口
+export PO=”7704″
+#目标端口
+export PI=”3389″
+
+export AII=”eth1″
+
+iptables -t nat -A PREROUTING -d $AO -p tcp –dport $PO -j DNAT –to-destination $BI:$PI
+iptables -t nat -A POSTROUTING -d $BI -p tcp –dport $PI -j SNAT –to $AI
+iptables -A FORWARD -o $AII -d $BI -p tcp –dport $PI -j ACCEPT
+iptables -A FORWARD -i $AII -s $BI -p tcp –sport $PI -j ACCEPT
+
+学习端口映射网址：https://www.juyimeng.com/linux-iptalbes-ip-forward.html
+
+## 终极总结：
+端口映射即出站入站规则，是由网关管理的，所以要想做端口映射必须要在网关上进行设置，设置网关的出入站规则即可做端口映射，
+linux 系统上的网关是由 iptables 命令进行管理的
+windos 上的网关是由，windos防火墙进行管理的，打开windos防火墙的高级设置就可设置，出站入站规则

@@ -1,0 +1,143 @@
+## 1.导入依赖：
+
+```xml
+<dependency>
+  <groupId>redis.clients</groupId>
+  <artifactId>jedis</artifactId>
+  <version>3.0.1</version>
+</dependency>
+```
+
+## 2.Redis连接:
+
+```java
+public static void main(String[] args) {
+    System.out.println("Test01的结果是："+Test01());
+    System.out.println("Test02的结果是："+Test02());
+    System.out.println("Test03的结果是："+Test03());
+}
+//原生Redis连接：没有配置文件直接连接
+public static String Test01() {
+    //创建redis连接
+    Jedis jedis = new Jedis("192.168.217.136", 6379);
+    //设置key,value 的值
+    jedis.set("test", "123");
+    //通过 key 获取 value 的值
+    String test = jedis.get("test");
+    jedis.close();
+    return test;
+}
+//通过连接池连接：没有配置文件直接连接
+public static String Test02() {
+    JedisPool jedisPool = new JedisPool("192.168.217.136", 6379);
+    Jedis resource = jedisPool.getResource();
+    resource.set("test01", "456");
+    String test01 = resource.get("test01");
+    resource.close();
+    return test01;
+}
+//通过spring托管的连接池对象获取连接：spring整合Redis：有
+public static String Test03() {
+    ClassPathXmlApplicationContext classPathXmlApplicationContext = new ClassPathXmlApplicationContext("jedis.xml");
+    JedisPool jedisPool = (JedisPool) classPathXmlApplicationContext.getBean("jedisPool");
+    Jedis resource = jedisPool.getResource();
+    String test = resource.get("test");
+    resource.close();
+    return test;
+}
+```
+
+## Spring整合Redis的全局配置文件：
+
+```xml
+<!-- 连接池配置 -->
+<bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
+    <!-- 最大连接数 -->
+    <property name="maxTotal" value="30" />
+    <!-- 最大空闲连接数 -->
+    <property name="maxIdle" value="10" />
+    <!-- 每次释放连接的最大数目 -->
+    <property name="numTestsPerEvictionRun" value="1024" />
+    <!-- 释放连接的扫描间隔（毫秒） -->
+    <property name="timeBetweenEvictionRunsMillis" value="30000" />
+    <!-- 连接最小空闲时间 -->
+    <property name="minEvictableIdleTimeMillis" value="1800000" />
+    <!-- 连接空闲多久后释放, 当空闲时间>该值 且 空闲连接>最大空闲连接数 时直接释放 -->
+    <property name="softMinEvictableIdleTimeMillis" value="10000" />
+    <!-- 获取连接时的最大等待毫秒数,小于零:阻塞不确定的时间,默认-1 -->
+    <property name="maxWaitMillis" value="1500" />
+    <!-- 在获取连接的时候检查有效性, 默认false -->
+    <property name="testOnBorrow" value="false" />
+    <!-- 在空闲时检查有效性, 默认false -->
+    <property name="testWhileIdle" value="true" />
+    <!-- 连接耗尽时是否阻塞, false报异常,ture阻塞直到超时, 默认true -->
+    <property name="blockWhenExhausted" value="false" />
+</bean>
+<!-- redis单机 通过连接池 ： 注意：java类只要获取spring容器中此bean的对象就能对Redis数据库进行增删改查操作 -->
+<bean id="jedisPool" class="redis.clients.jedis.JedisPool" destroy-method="close">
+    <constructor-arg name="poolConfig" ref="jedisPoolConfig" />
+    <constructor-arg name="host" value="192.168.217.136" />
+    <constructor-arg name="port" value="6379" />
+</bean>
+```
+
+## Redis类型整合：
+
+```java
+System.out.println("==============================================================");
+//String字符串
+//增：设置多个键对值，也可以设置单个值 mset [key] [value] [key] [value] ...
+//删：删除多个键对值，也可以设置单个值 del [key] [key] ...
+//改：修改多个键对值，也可以设置单个值 mset [key] [value] [key] [value] ...
+//查：查询多个键对值，也可以设置单个值 mget [key] [key] ...  java代码返回值 list<String>类型
+System.out.println("==============================================================");
+//hash散列 键值集合(内部有 key 有 value)
+//增：hash键对值列表内部一次增加多个值，也可以增加单个值 hmset [hash key] [key] [value] [key] [value] ...
+//删：删hash键值集合 del [hash key] 删除hash表内键对值 hdel [hash key] [key] [key] ...
+//改：在hash键值集合修改多个键值，也可以修改单个 hmset [hash key] [key] [value] [key] [value] ...
+//查：查单个：在hash键值集合内查询单个值 hget [hash key] [key]   java代码返回值 String类型
+//   查多个：查询全部返回键值集合 hgetall [hash key] 查询全部key值 hkeys [hash key] 查询全部value值 hvals [hash key]
+//集合长度：获取hash键值集合的长度 hlen [hash key]
+System.out.println("==============================================================");
+//linkedlist集合(有序的双向链表有索引，此链表可以从左添加数据，也可以从右边添加数据,内部存储没有key，只有value)
+//增：向链表左边添加数据 lpush [linkedlist key] [value] [value] ...
+//   向链表右边添加数据 rpush [linkedlist key] [value] [value] ...
+//删：删除集合 del [linkedlist key]
+//   删除指定索引的值 注意；要删除一个指定索引的值要先修改指定索引的值，再删除此值
+//                  lset [linkedlist key] [index] [value] //修改索引值
+//                  lrem [linkedlist] [count] [value] //删除指定值在集合中的值，进行指定值和集合值匹配删除
+//      注意：count 大于 0 时 lrem 会从链表左边开始匹配删除，只删除匹配到的第一个，即只删除一个
+//           count 小于 0 时 lrem 会从链表右边开始匹配删除，只删除匹配到的第一个，即只删除一个
+//           count 等于 0 时 lrem 会删除链表中所有值为指定 value 的值
+//改：修改指定索引的值 lset [linkedlist key] [index] [value]
+//查：查一个：获取指定索引的值 lindex [linkedlist key] [index value]
+//   查多个：获取linkedlist集合，起始索引到结束索引，之间所有的值也可以用来查全部 lrange [start index] [end index]
+//集合长度：获取linkedlist集合的长度 llen [linkedlist key]
+System.out.println("==============================================================");
+//set集合(无序的集合,内部存储没有key，只有value，没有索引,注意set可以进行交集，并集，补集的计算)
+//增：可增加多个值，也可增加一个值 sadd [set key] [value] [value] ...
+//删：删除集合 ：del [set key]
+//   删除一个 ：没有索引只能根据指定值和set集合内部的值进行匹配删除，
+//            可同时匹配删除多个 srem [set key] [value] [value] ...
+//改：警告没有索引，没有key,不能修改，只能添加和删除
+//查：没有索引，没有key,只能查全部,不能查单独一个，返回集合的全部值 smembers [set key]
+//集合长度：获取set集合长度 scard [set key]
+System.out.println("===============================================================");
+//sorted set(有序的list集合,有索引，有(score)分数相当于大小排列的索引，内部根据分数的大小改变值的位置，可自行修改分数改变值的位置)
+//增：添加多个值也可添加一个值 zadd [sortedlist key] [score] [value] [score] [value] ...
+//删：删除sorted set集合 del [sortedlist key]
+//   删除指定value值的元素 zrem [sortedlist key] [value] [value] ...
+//改：
+//查：查一个：根据指定value值,获取分数(score)值  zscore [sortedlist key] [value]
+//          根据指定分数查value值
+//   查多个：根据分数，获得分数(score)指定范围内的值 zrangebyscore [sortedlist key] [start score] [end score] withscores
+//          根据索引，获得索引指定范围的值 zrevrange scoreboard [start index] [end index]
+//集合长度：获取sorted set集合长度 zcard [sortedlist key]
+System.out.println("===============================================================");
+```
+
+## 设置key的生存时间
+expire [key] [times]			 //设置key的生存时间（单位：秒）key在多少秒后会自动删除
+ttl [key] 					//查看key剩余的生存时间
+persist [key]				//清除生存时间 
+pexpire [key] milliseconds	//生存时间设置单位为：毫秒

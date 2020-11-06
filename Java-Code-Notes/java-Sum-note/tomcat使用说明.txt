@@ -1,0 +1,18 @@
+Tomcat安装：
+下载：https://tomcat.apache.org/
+解压即可使用！
+配置环境变量：
+1.新建CATALINA_BASE变量
+变量名：CATALINA_BASE
+变量值：D:\Program Files (x86)\Java\tomcat-8.5.33
+（填Tomcat的安装位置,免安装版的就是其解压位置）
+2.新建CATALINA_HOME变量
+变量名：CATALINA_HOME
+变量值：D:\Program Files (x86)\Java\tomcat-8.5.33
+（填Tomcat的安装位置,免安装版的就是其解压位置）
+3.找到Path变量，点击编辑
+变量名：Path
+变量值：直接复制，添加在原变量值的末尾 ;%CATALINA_HOME%\bin;%CATALINA_HOME%\lib
+（注意，前面的那个分号是用来和原有的变量值隔开的，如果原来有的话，就不用写了）
+测试是否安装成功：
+win+R : cmd :startup 测试启动是否成功
