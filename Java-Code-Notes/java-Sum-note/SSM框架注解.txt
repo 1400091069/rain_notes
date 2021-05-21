@@ -505,7 +505,9 @@ Java，Spring原始类接收请求代码写法：
 
 ***注意：封装json字符串数据：在接收请求的方法上添加一个：@RequestBody 注解即可封装***，此方式对封装Map数据很适用
 
-***注意：封装前台传过来的对象数据，表单数据(包括json对象) 用 @RequestParam注解即可封装***，此方式对封装Map数据很适用
+​			 **json数据的接收和封装不支持   单个参数   进行接收json数据, 必须用对象 或 集合来接收数据, 否则封装失败**
+
+***注意：封装前台传过来的对象数据，表单数据(包括 json对象) 用 @RequestParam注解即可封装***，此方式对封装Map数据很适用
 
 # Spring整合mybatis
 
@@ -785,7 +787,8 @@ public class BaseExceptionHandler {
      */
     @ExceptionHandler(NullPointerException.class) //可以省去try/cath代码
     @ResponseBody     //返回的数据解析成json字符串
-    public ReslutObject BaseExceptionHandler() {
+    public ReslutObject BaseExceptionHandler(Exception e) { // 接收异常
+       e.printStackTrace(); // (Exception)异常对象 中 在控制台打印错误信息的方法
        return new ReslutObject(false, StatusCode.ERROR, "请求失败！");
     }
 
